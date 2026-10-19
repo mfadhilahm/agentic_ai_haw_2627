@@ -1,5 +1,30 @@
 # Quality-Agent: lokale Ausführungsevidenz, 19. Oktober 2026
 
+## Aktueller Nachweis: gemeinsames Task-/State-Modell im Quality-Agenten
+
+`shared-task-verified-report.json` und `shared-task-verified-trace.jsonl` belegen den
+abschließenden echten Ollama-Lauf mit dem neuen `EngineeringTask`/`QualityTask` und
+`EngineeringState`. Beide internen Prüfschritte verwenden denselben normalisierten Task;
+Task-/Workflow-ID und die gespeicherten Task-Daten stimmen überein. Die LLM-Zusammenfassung
+ist gültig (`summary_status=ok`); 21 Policytests und die ausgewählte Security-Prüfung sind
+erfolgreich. Menschliches Review weiterhin ausstehend.
+
+`shared-task-pytest.xml` und `shared-task-pytest.txt` dokumentieren **74 passed, 1 skipped**
+im vollständigen Standardlauf (rund 13,24 Sekunden). Enthalten sind 15 neue Testfälle für
+Task-Validierung, JSON-Übergabe, kompatible Eingaben, tatsächliche Verwendung desselben
+Task-Objekts, Erfolgs-/Fehlerfälle sowie die Trennung von Task-Metadaten und LLM-Anweisungen.
+Der optionale Datenbanktest bleibt übersprungen.
+
+Python-Quellhash dieses abschließenden Laufs:
+`e98c8217243b9ec7640624ecf8e74976af7b01963b2761bc921cc6d8560ecccd`.
+Die übrigen `shared-task-report`-/`shared-task-final-report`-Dateien sind Zwischenstände.
+
+Auf Wunsch wurde nur der bestehende Quality-Agent vorbereitet. Ein zweiter eigenständiger
+Team-Agent ist noch nicht angebunden; die entsprechende Kursanforderung ist damit noch
+nicht vollständig nachgewiesen. Rollen- und Organisationsdateien bleiben unverändert.
+Details zur Schnittstelle stehen in `docs/TASK_MODEL_DE.md`. Die folgenden Abschnitte
+beziehen sich auf ältere Stände vor dieser Erweiterung.
+
 ## Aktueller Nachweis nach Ollama-Korrektur
 
 Die Dateien `ollama-fix-report.json` und `ollama-fix-trace.jsonl` dokumentieren einen

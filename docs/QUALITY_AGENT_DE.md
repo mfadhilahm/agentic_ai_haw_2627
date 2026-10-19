@@ -16,14 +16,18 @@ flowchart TD
     Human --> Review[Explizite Entscheidung als separates Review-Artefakt]
 ```
 
-Beide Prüfer erhalten dieselbe Task-/Workflow-ID, besitzen eigene Run-IDs und liefern
+Beide Prüfer verwenden das gemeinsame Modell aus `src/models/tasks.py` und den
+Task-Kanal des `EngineeringState` (siehe `docs/TASK_MODEL_DE.md`). Sie erhalten dasselbe
+QualityTask-Objekt mit derselben Task-/Workflow-ID, besitzen eigene Run-IDs und liefern
 strukturierte Ergebnisse. Security bekommt zusätzlich das QA-Ergebnis aus dem State
 und prüft dessen Freigabepflicht sowie die Konsistenz eines Erfolgsstatus. Der Security-Trace
 verweist auf die Run-ID des QA-Agenten. Es gibt keine Copy/Paste-Übergabe zwischen den Prüfern.
 
 Der bestehende QA-Agent bleibt separat aufrufbar. Ein eigener Entwickler-Agent und eine
 Work-Item-API sind in diesem Stand noch nicht implementiert. Ein späterer Entwickler-Agent
-kann einen `QualityTask` übergeben; diese Schnittstelle ersetzt keinen echten Entwicklerlauf.
+kann einen `EngineeringTask` oder `QualityTask` übergeben; diese Schnittstelle ersetzt keinen echten Entwicklerlauf.
+Der Quality-Agent bleibt ein Agent mit zwei internen Prüfschritten. Die Kursanforderung
+für mindestens zwei eigenständige Agenten braucht später die tatsächliche Anbindung eines Team-Agenten.
 Der Referenzagent unter `examples/` ist weiterhin Starter-Code und kein eigener Leistungsnachweis.
 
 ## Verbindliche Regeln
@@ -61,7 +65,7 @@ Set-Location 'C:\AgenticAi\agentic_ai_haw_2627'
 .\.venv\Scripts\python.exe -m pytest
 
 # Nur die eigenen QA-/Quality-Tests, ohne echten Modellaufruf
-.\.venv\Scripts\python.exe -m pytest tests/test_qa_test_agent.py tests/test_quality_policy.py tests/test_quality_workflow.py -v
+.\.venv\Scripts\python.exe -m pytest tests/test_qa_test_agent.py tests/test_quality_policy.py tests/test_quality_workflow.py tests/test_shared_task.py -v
 
 # Nur unveränderbare Ergebnis-/Freigabepolicy
 .\.venv\Scripts\python.exe -m pytest tests/test_quality_policy.py -v
@@ -119,12 +123,13 @@ Strukturierter Auftrag, beispielsweise von einem späteren vorgeschalteten Agent
 Mit `--task-file` werden die Task-Felder aus der JSON-Datei verwendet. Alternativ aus Python:
 
 ```python
-from src.agents.quality_agent import QualityTask, run_quality_agent
+from src.agents.quality_agent import run_quality_agent
+from src.models.tasks import QualityTask
 
 report = run_quality_agent(QualityTask(
     task_id="WORK-ITEM-001",
     pytest_target="tests/test_quality_policy.py",
-    artifacts=["src/app/main.py"],
+    input_files=["src/app/main.py"],
 ))
 ```
 

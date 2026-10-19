@@ -99,13 +99,15 @@ def test_security_detects_risky_code_without_echoing_secrets(monkeypatch, tmp_pa
 
 def test_security_rejects_env_and_outside_paths(tmp_path):
     path = tmp_path / "trace.jsonl"
-    result = security.run_security_agent("TEST-SECURITY", [".env", "../outside.py"], trace_file=str(path))
+    result = security.run_security_agent(quality.QualityTask(
+        task_id="TEST-SECURITY", input_files=[".env", "../outside.py"]), trace_file=str(path))
     assert result.status == "error"
     assert trace(path)[0]["tools"] == []
 
 
 def test_empty_security_scope_requires_review(tmp_path):
-    result = security.run_security_agent("TEST-SECURITY", [], trace_file=str(tmp_path / "trace.jsonl"))
+    result = security.run_security_agent(quality.QualityTask(task_id="TEST-SECURITY"),
+        trace_file=str(tmp_path / "trace.jsonl"))
     assert result.status == "needs_review"
 
 
@@ -235,7 +237,8 @@ def test_injection_in_test_output_cannot_change_decisions(monkeypatch, tmp_path)
 
 
 def test_security_checks_the_upstream_qa_result(tmp_path):
-    result = security.run_security_agent("TEST-UPSTREAM", ["src/app/main.py"],
+    result = security.run_security_agent(quality.QualityTask(
+        task_id="TEST-UPSTREAM", input_files=["src/app/main.py"]),
         qa_result={"status": "passed", "pytest_exit_code": 1, "human_approval_required": False},
         trace_file=str(tmp_path / "trace.jsonl"))
     assert result.status == "needs_review"

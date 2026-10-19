@@ -7,20 +7,15 @@ import json
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Literal, TypedDict
+from typing import Any, Literal, cast
 
 from langgraph.graph import END, START, StateGraph
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict
 
-from src.agents.qa_test_agent import QATestRequest, QATestResult, run_qa_agent
+from src.agents.qa_test_agent import QATestResult, run_qa_agent
 from src.agents.quality_support import source_version, write_json
 from src.agents.security_agent import SecurityResult, run_security_agent
-
-
-class QualityTask(QATestRequest):
-    model_config = ConfigDict(extra="forbid")
-    artifacts: list[str] = Field(default_factory=list, max_length=20)
-    workflow_id: str = Field(default_factory=lambda: str(uuid.uuid4()), pattern=r"^[A-Za-z0-9_-]{1,100}$")
+from src.models.tasks import EngineeringState, EngineeringTask, QualityTask
 
 
 class QualityReport(BaseModel):
@@ -35,8 +30,7 @@ class QualityReport(BaseModel):
     source_version: dict[str, Any]
 
 
-class QualityState(TypedDict, total=False):
-    task: QualityTask
+class QualityState(EngineeringState, total=False):
     qa: dict[str, Any]
     security: dict[str, Any]
     report: dict[str, Any]
@@ -44,16 +38,12 @@ class QualityState(TypedDict, total=False):
 
 def build_quality_graph(*, llm: Any | None = None, trace_file: str | None = None):
     def qa_node(state: QualityState) -> QualityState:
-        task = state["task"]
-        request = QATestRequest(task_id=task.task_id, pytest_target=task.pytest_target,
-                                timeout_seconds=task.timeout_seconds)
-        return {"qa": run_qa_agent(request, llm=llm, trace_file=trace_file,
-                                    workflow_id=task.workflow_id).model_dump()}
+        task = cast(QualityTask, state["task"])
+        return {"qa": run_qa_agent(task, llm=llm, trace_file=trace_file).model_dump()}
 
     def security_node(state: QualityState) -> QualityState:
         task = state["task"]
-        return {"security": run_security_agent(task.task_id, task.artifacts,
-            workflow_id=task.workflow_id, trace_file=trace_file,
+        return {"security": run_security_agent(task, trace_file=trace_file,
             qa_result=state["qa"]).model_dump()}
 
     def human_gate(state: QualityState) -> QualityState:
@@ -76,8 +66,11 @@ def build_quality_graph(*, llm: Any | None = None, trace_file: str | None = None
     return graph.compile()
 
 
-def run_quality_agent(task: QualityTask, *, llm: Any | None = None,
+def run_quality_agent(task: EngineeringTask | dict[str, Any], *, llm: Any | None = None,
                       trace_file: str | None = None) -> QualityReport:
+    if isinstance(task, EngineeringTask) and not isinstance(task, QualityTask):
+        task = task.model_dump()
+    task = QualityTask.model_validate(task)
     state = build_quality_graph(llm=llm, trace_file=trace_file).invoke(
         {"task": task}, {"recursion_limit": 6})
     return QualityReport.model_validate(state["report"])
@@ -132,7 +125,7 @@ def main() -> None:
         return
     task = QualityTask.model_validate_json(args.task_file.read_bytes()) if args.task_file else QualityTask(
         task_id=args.task_id, pytest_target=args.pytest_target, timeout_seconds=args.timeout_seconds,
-        artifacts=args.artifact if args.artifact is not None else ["src/app/main.py"])
+        input_files=args.artifact if args.artifact is not None else ["src/app/main.py"])
     report = run_quality_agent(task, trace_file=args.trace_file)
     report_path = args.report or Path("logs") / f"{task.workflow_id}.report.json"
     write_json(report_path, report.model_dump())

@@ -1,6 +1,9 @@
 {
   "task_id": "SESSION-02-QUALITY",
+  "task_type": "quality_review",
+  "description": "Run QA policy tests and inspect the API source for security risks.",
+  "assigned_role": "quality",
   "pytest_target": "tests/test_quality_policy.py",
   "timeout_seconds": 60,
-  "artifacts": ["src/app/main.py"]
+  "input_files": ["src/app/main.py"]
 }

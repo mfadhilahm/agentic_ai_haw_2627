@@ -14,6 +14,7 @@ from typing import Literal
 from pydantic import BaseModel, Field
 
 from src.agents.quality_support import REPO_ROOT, source_version
+from src.models.tasks import EngineeringTask
 from src.observability.tracing import append_trace, estimate_cost_credits
 
 
@@ -85,8 +86,10 @@ def inspect_python(relative: str) -> tuple[list[SecurityFinding], str]:
     return findings, hashlib.sha256(content).hexdigest()
 
 
-def run_security_agent(task_id: str, artifacts: list[str], *, workflow_id: str | None = None,
+def run_security_agent(task: EngineeringTask, *,
                        trace_file: str | None = None, qa_result: dict | None = None) -> SecurityResult:
+    task = EngineeringTask.model_validate(task)
+    artifacts = task.input_files
     started = time.perf_counter()
     run_id = str(uuid.uuid4())
     result = SecurityResult(status="passed", run_id=run_id)
@@ -119,7 +122,8 @@ def run_security_agent(task_id: str, artifacts: list[str], *, workflow_id: str |
         result.status = "needs_review"
     duration = time.perf_counter() - started
     path = append_trace({
-        "run_id": run_id, "workflow_id": workflow_id or run_id, "task_id": task_id,
+        "run_id": run_id, "workflow_id": task.workflow_id, "task_id": task.task_id,
+        "task": task.model_dump(mode="json"),
         "agent": "quality-security-checker", "role": "ai_safety_security_engineer",
         "upstream_qa_run_id": qa_result.get("run_id") if qa_result else None,
         "provider": "deterministic", "model": None, "calls": 0, "tools": tools,
