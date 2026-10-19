@@ -50,20 +50,20 @@ roles:
     title: Software Architect
     responsibility: System architecture, interfaces, ADRs, technical standards
     current_actor_type: hybrid
-    current_actor: minh, sa-agent
+    current_actor: minh, dev_architect_agent
     target_actor_type: hybrid
-    target_actor: minh, sa-agent
+    target_actor: minh, dev_architect_agent
     accountable_human: minh
-    human_approval_required: TBD
+    human_approval_required: true
     implementation_status: operational
 
   - id: backend_api_engineer
     title: Backend / API Engineer
     responsibility: FastAPI services, business logic, API contracts
-    current_actor_type: human
-    current_actor: mirko
+    current_actor_type: hybrid
+    current_actor: mirko, dev_architect_agent
     target_actor_type: hybrid
-    target_actor: mirko, bae-agent
+    target_actor: mirko, dev_architect_agent
     accountable_human: mirko
     human_approval_required: true
     implementation_status: operational
@@ -82,7 +82,7 @@ roles:
   - id: agent_engineer
     title: Agent Engineer
     responsibility: LangGraph workflows, LangChain integration, agent state and tools
-    current_actor_type: human
+    current_actor_type: hybrid
     current_actor: muhammad
     target_actor_type: hybrid
     target_actor: muhammad, agentE-agent
@@ -93,7 +93,7 @@ roles:
   - id: integration_engineer
     title: Integration Engineer
     responsibility: Agent-to-agent and agent-to-system interfaces and handovers
-    current_actor_type: human
+    current_actor_type: agent
     current_actor: saad
     target_actor_type: agent
     target_actor: int-agent
@@ -104,7 +104,7 @@ roles:
   - id: qa_test_engineer
     title: QA & Test Engineer
     responsibility: pytest, regression testing, agent evaluation, quality evidence
-    current_actor_type: human
+    current_actor_type: agent
     current_actor: felix
     target_actor_type: agent
     target_actor: test-agent
@@ -115,7 +115,7 @@ roles:
   - id: devops_engineer
     title: DevOps Engineer
     responsibility: Docker, GitHub Actions, build, deployment and reproducibility
-    current_actor_type: human
+    current_actor_type: hybrid
     current_actor: muhammad
     target_actor_type: hybrid
     target_actor: muhammad, dev-agent
@@ -126,7 +126,7 @@ roles:
   - id: ai_safety_security_engineer
     title: AI Safety & Security Engineer
     responsibility: Tool permissions, guardrails, secrets, prompt and agent risks
-    current_actor_type: human
+    current_actor_type: agent
     current_actor: mirko
     target_actor_type: agent
     target_actor: safety-agent
@@ -137,7 +137,7 @@ roles:
   - id: cost_observability_engineer
     title: Cost & Observability Engineer
     responsibility: Traces, runtime, token usage, cost model and cost optimization
-    current_actor_type: human
+    current_actor_type: agent
     current_actor: minh
     target_actor_type: agent
     target_actor: cost-agent
