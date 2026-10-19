@@ -1,0 +1,6 @@
+{
+  "task_id": "SESSION-02-QUALITY",
+  "pytest_target": "tests/test_quality_policy.py",
+  "timeout_seconds": 60,
+  "artifacts": ["src/app/main.py"]
+}

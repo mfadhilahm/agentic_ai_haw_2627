@@ -1,0 +1,54 @@
+{
+  "task": {
+    "task_id": "SESSION-02-QUALITY",
+    "pytest_target": "tests/test_quality_policy.py",
+    "timeout_seconds": 60,
+    "artifacts": [
+      "src/app/main.py"
+    ],
+    "workflow_id": "211c2577-dc16-455a-af93-d7c6d6efcef3"
+  },
+  "qa": {
+    "status": "passed",
+    "summary": "pytest finished, but the configured LLM could not summarize the run: LLM call timed out",
+    "pytest_exit_code": 0,
+    "findings": [
+      {
+        "severity": "medium",
+        "description": "Human QA review required because LLM summarization failed."
+      }
+    ],
+    "human_approval_required": true,
+    "summary_status": "unavailable",
+    "run_id": "28d7b5d5-0cbb-4fa6-a2fb-a6afee1071ae",
+    "trace_path": "logs\\agent-runs.jsonl",
+    "tool_status": "completed"
+  },
+  "security": {
+    "status": "passed",
+    "checks": [
+      "artifact_path_boundary",
+      "dynamic_code_execution",
+      "shell_execution",
+      "literal_credentials",
+      "human_approval_policy",
+      "technical_status_integrity"
+    ],
+    "findings": [],
+    "artifact_sha256": {
+      "src/app/main.py": "59e302f7a1c63e4abc926ad6ae5d10a10b5eba57abdd7a41ae83ba3f4e0b87c5"
+    },
+    "human_approval_required": true,
+    "run_id": "97cbd802-7c30-4e6a-bd84-07eaafbcbf97",
+    "trace_path": "logs\\agent-runs.jsonl"
+  },
+  "status": "awaiting_human_review",
+  "human_approval_required": true,
+  "human_decision": "pending",
+  "created_at": "2026-10-19T09:35:26.958474+00:00",
+  "source_version": {
+    "commit_sha": "be9fe194df18b7e3ddfb46bc67baab644f1eebe6",
+    "working_tree_dirty": true,
+    "source_sha256": "585fe7ee0fe9acaf3b63ece2bb1b0e29cc5a91ebf51988be947245a7e054b276"
+  }
+}

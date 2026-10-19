@@ -1,0 +1,49 @@
+{
+  "task": {
+    "task_id": "SESSION-02-QUALITY",
+    "pytest_target": "tests/test_quality_policy.py",
+    "timeout_seconds": 60,
+    "artifacts": [
+      "src/app/main.py"
+    ],
+    "workflow_id": "62aa30e4-0784-473e-8684-4bb0fce7e0b9"
+  },
+  "qa": {
+    "status": "passed",
+    "summary": "All 21 tests in test_quality_policy.py passed successfully.",
+    "pytest_exit_code": 0,
+    "findings": [],
+    "human_approval_required": true,
+    "summary_status": "ok",
+    "run_id": "bd4a87c6-c0d6-4830-94f9-dfa60f5c81aa",
+    "trace_path": "evidence\\session-02\\ollama-fix-trace.jsonl",
+    "tool_status": "completed"
+  },
+  "security": {
+    "status": "passed",
+    "checks": [
+      "artifact_path_boundary",
+      "dynamic_code_execution",
+      "shell_execution",
+      "literal_credentials",
+      "human_approval_policy",
+      "technical_status_integrity"
+    ],
+    "findings": [],
+    "artifact_sha256": {
+      "src/app/main.py": "59e302f7a1c63e4abc926ad6ae5d10a10b5eba57abdd7a41ae83ba3f4e0b87c5"
+    },
+    "human_approval_required": true,
+    "run_id": "88ab2377-2f8b-4fec-b596-b19c415785f5",
+    "trace_path": "evidence\\session-02\\ollama-fix-trace.jsonl"
+  },
+  "status": "awaiting_human_review",
+  "human_approval_required": true,
+  "human_decision": "pending",
+  "created_at": "2026-10-19T09:49:36.054878+00:00",
+  "source_version": {
+    "commit_sha": "be9fe194df18b7e3ddfb46bc67baab644f1eebe6",
+    "working_tree_dirty": true,
+    "source_sha256": "39f15ef099e37b760df217e6e89dadb44aeff2c523642dd348a1d55f9372b282"
+  }
+}

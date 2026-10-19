@@ -19,8 +19,8 @@ class Settings(BaseSettings):
     llm_base_url: str = "http://localhost:11434"
     llm_api_key: str = ""
     llm_temperature: float = 0.0
-    llm_timeout_seconds: float = Field(default=120.0, gt=0)
-    llm_max_output_tokens: int = Field(default=768, gt=0)
+    llm_timeout_seconds: float = Field(default=180.0, gt=0)
+    llm_max_output_tokens: int = Field(default=384, gt=0)
 
     embedding_provider: Literal["ollama", "openai_compatible"] = "ollama"
     embedding_model: str = "nomic-embed-text"
