@@ -71,46 +71,46 @@ roles:
   - id: data_rag_engineer
     title: Data & RAG Engineer
     responsibility: PostgreSQL, pgvector, ingestion, chunking, retrieval, embeddings
-    current_actor_type: agent
-    current_actor: data-agent
+    current_actor_type: hybrid
+    current_actor: yaw, data-agent
     target_actor_type: agent
     target_actor: data-agent
     accountable_human: yaw
     human_approval_required: true
-    implementation_status: planned
+    implementation_status: operational
 
   - id: agent_engineer
     title: Agent Engineer
     responsibility: LangGraph workflows, LangChain integration, agent state and tools
-    current_actor_type: human
-    current_actor: muhammad
+    current_actor_type: hybrid
+    current_actor: muhammad, platform-agent
     target_actor_type: hybrid
-    target_actor: muhammad, agentE-agent
+    target_actor: muhammad, platform-agent
     accountable_human: muhammad
     human_approval_required: true
-    implementation_status: planned
+    implementation_status: operational
 
   - id: integration_engineer
     title: Integration Engineer
     responsibility: Agent-to-agent and agent-to-system interfaces and handovers
-    current_actor_type: human
-    current_actor: saad
+    current_actor_type: hybrid
+    current_actor: saad, platform-agent
     target_actor_type: agent
-    target_actor: int-agent
+    target_actor: platform-agent
     accountable_human: saad
     human_approval_required: true
-    implementation_status: planned
+    implementation_status: operational
 
   - id: qa_test_engineer
     title: QA & Test Engineer
     responsibility: pytest, regression testing, agent evaluation, quality evidence
-    current_actor_type: human
-    current_actor: felix
+    current_actor_type: hybrid
+    current_actor: felix, qa-test-agent
     target_actor_type: agent
-    target_actor: test-agent
+    target_actor: qa-test-agent
     accountable_human: felix
     human_approval_required: true
-    implementation_status: planned
+    implementation_status: operational
 
   - id: devops_engineer
     title: DevOps Engineer
@@ -121,18 +121,18 @@ roles:
     target_actor: mirko, ops-agent (devops)
     accountable_human: mirko
     human_approval_required: true
-    implementation_status: implemented
+    implementation_status: operational
 
   - id: ai_safety_security_engineer
     title: AI Safety & Security Engineer
     responsibility: Tool permissions, guardrails, secrets, prompt and agent risks
-    current_actor_type: human
-    current_actor: mirko
+    current_actor_type: hybrid
+    current_actor: mirko, security-agent
     target_actor_type: agent
-    target_actor: safety-agent
+    target_actor: security-agent
     accountable_human: mirko
     human_approval_required: true
-    implementation_status: planned
+    implementation_status: operational
 
   - id: cost_observability_engineer
     title: Cost & Observability Engineer
@@ -143,4 +143,4 @@ roles:
     target_actor: mirko, ops-agent (observability)
     accountable_human: mirko
     human_approval_required: true
-    implementation_status: implemented
+    implementation_status: operational

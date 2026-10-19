@@ -3,3 +3,6 @@ date,task_id,actor_type,actor,quantity,unit,credits,notes
 2026-10-12,SESSION-01-QA,agent,qa-test-agent,3,runs,16.4369,Model qwen3:4b; total duration 1324.1468 seconds; two successful traces and one timeout escalation; recorded tokens 252 input and 4760 output where available
 2026-10-12,SESSION-01-TESTS,human,Sebastian,1,local_pytest_run,0.0,Local verification run completed with 6 passed tests
 2026-10-12,SESSION-01-CI,ci,GitHub Actions,0,runs,0.0,No GitHub CI run observed locally during this Termin 1 completion
+2026-10-19,SESSION-02-PLAT-AE,agent,platform-agent (agent_engineer),1,runs,1.2448,run_id=46ee4e55-be12-4e4e-b6dd-bb08bdaae33d workflow_id=6f30c3fa-e604-4a5c-a69a-7131061fe36f model=qwen3:4b calls=1 duration=20.2603s input_tokens=573 output_tokens=768
+2026-10-19,DRYRUN-WORKITEMS-IE,agent,platform-agent (integration_engineer),1,runs,1.2434,run_id=5513fa3e-50c4-483d-9994-cbfb5c5cf385 workflow_id=d6275b2f-b5f9-431f-bf6a-c446f4cdde05 model=qwen3:4b calls=1 duration=20.4326s input_tokens=418 output_tokens=768
+2026-10-19,SESSION-02-PLATFORM,human,muhammad,1.5,hours,150.0,Implementation and human review of platform-agent (agent_engineer and integration_engineer) and handover workflow
