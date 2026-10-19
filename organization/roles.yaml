@@ -16,9 +16,9 @@ roles:
   - id: managing_director_customer_lead
     title: Managing Director / Customer Lead
     responsibility: Customer communication, priorities, company-level decisions
-    current_actor_type: human
+    current_actor_type: hybrid
     current_actor: yaw
-    target_actor_type: human
+    target_actor_type: hybrid
     target_actor: yaw
     accountable_human: yaw
     human_approval_required: true
@@ -27,9 +27,9 @@ roles:
   - id: product_owner_requirements
     title: Product Owner / Requirements Engineer
     responsibility: Requirements, user stories, acceptance criteria, backlog value
-    current_actor_type: human
+    current_actor_type: hybrid
     current_actor: saad
-    target_actor_type: human
+    target_actor_type: hybrid
     target_actor: saad
     accountable_human: saad
     human_approval_required: true
@@ -38,9 +38,9 @@ roles:
   - id: project_manager
     title: Project Manager
     responsibility: Planning, task allocation, progress, dependencies, delivery risk
-    current_actor_type: human
+    current_actor_type: hybrid
     current_actor: felix
-    target_actor_type: human
+    target_actor_type: hybrid
     target_actor: felix
     accountable_human: felix
     human_approval_required: true
@@ -49,8 +49,8 @@ roles:
   - id: software_architect
     title: Software Architect
     responsibility: System architecture, interfaces, ADRs, technical standards
-    current_actor_type: human
-    current_actor: minh
+    current_actor_type: hybrid
+    current_actor: minh, sa-agent
     target_actor_type: hybrid
     target_actor: minh, sa-agent
     accountable_human: minh
@@ -71,8 +71,8 @@ roles:
   - id: data_rag_engineer
     title: Data & RAG Engineer
     responsibility: PostgreSQL, pgvector, ingestion, chunking, retrieval, embeddings
-    current_actor_type: human
-    current_actor: yaw
+    current_actor_type: agent
+    current_actor: data-agent
     target_actor_type: agent
     target_actor: data-agent
     accountable_human: yaw
