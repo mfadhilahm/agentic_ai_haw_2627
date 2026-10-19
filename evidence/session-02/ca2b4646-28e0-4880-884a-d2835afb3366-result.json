@@ -1,0 +1,8 @@
+{
+  "status": "success",
+  "summary": "- Dataengineering wird zuerst durch Agenten unterstützt.  \n- Operative Rollen wie Product Owner bleiben menschlich.  \n- Human Approval Gate ist vor Deployment notwendig.  \n- Technische Entscheidungen werden von der zuständigen Person mit Vollmacht getroffen.  \n- Für große und kritische Entscheidungen ist menschliche Zustimmung erforderlich.",
+  "error": "",
+  "source": "organization/company.md",
+  "run_id": "ca2b4646-28e0-4880-884a-d2835afb3366",
+  "trace_file": "logs\\ca2b4646-28e0-4880-884a-d2835afb3366.jsonl"
+}

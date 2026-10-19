@@ -6,22 +6,30 @@ from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from src.app.settings import Settings, get_settings
 
 
-def get_chat_model(settings: Settings | None = None, *, json_mode: bool = False) -> Any:
+def get_chat_model(
+    settings: Settings | None = None,
+    *,
+    reasoning: bool | None = None,
+    json_mode: bool = False,
+) -> Any:
     """Return the configured LangChain chat-model abstraction.
 
     Team agents should depend on this factory (or an evolved equivalent), not
     directly on Ollama or ICC-specific code.
+    Optional reasoning control applies only to Ollama models supporting it.
+    Thinking-only model variants cannot be made non-thinking by this flag.
     """
     settings = settings or get_settings()
 
     if settings.llm_provider == "ollama":
+        effective_reasoning = False if (json_mode and reasoning is None) else reasoning
         return ChatOllama(
             model=settings.llm_model,
             base_url=settings.llm_base_url,
             temperature=settings.llm_temperature,
             client_kwargs={"timeout": settings.llm_timeout_seconds},
             num_predict=settings.llm_max_output_tokens,
-            reasoning=False,
+            reasoning=effective_reasoning,
             format="json" if json_mode else None,
         )
 
