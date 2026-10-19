@@ -22,9 +22,10 @@ agent_runs:
     total_tokens: 5012
     note: "Input/Output-Tokens für Run 1 waren vom Provider null"
 
-ci_cd:
-  github_action_runs: 3
+ci:
+  runs: 3
+  run_credits: 1.0
 
 credits_calculation:
-  total_credits: 16.44
-  notes:
+  total_credits: 19.44
+  notes: "Agent-Credits (16.44) + CI-Kosten (3 Läufe * 1.0 Credits)"
