@@ -22,7 +22,7 @@ roles:
     target_actor: yaw
     accountable_human: yaw
     human_approval_required: true
-    implementation_status: operational
+    implementation_status: implemented
 
   - id: product_owner_requirements
     title: Product Owner / Requirements Engineer
@@ -33,7 +33,7 @@ roles:
     target_actor: saad
     accountable_human: saad
     human_approval_required: true
-    implementation_status: operational
+    implementation_status: implemented
 
   - id: project_manager
     title: Project Manager
@@ -44,29 +44,29 @@ roles:
     target_actor: felix
     accountable_human: felix
     human_approval_required: true
-    implementation_status: operational
+    implementation_status: implemented
 
   - id: software_architect
     title: Software Architect
     responsibility: System architecture, interfaces, ADRs, technical standards
     current_actor_type: hybrid
-    current_actor: minh, dev_architect_agent
+    current_actor: minh, sa-agent
     target_actor_type: hybrid
-    target_actor: minh, dev_architect_agent
+    target_actor: minh, sa-agent
     accountable_human: minh
-    human_approval_required: true
-    implementation_status: operational
+    human_approval_required: TBD
+    implementation_status: planned
 
   - id: backend_api_engineer
     title: Backend / API Engineer
     responsibility: FastAPI services, business logic, API contracts
-    current_actor_type: hybrid
-    current_actor: mirko, dev_architect_agent
+    current_actor_type: human
+    current_actor: mirko
     target_actor_type: hybrid
-    target_actor: mirko, dev_architect_agent
+    target_actor: mirko, bae-agent
     accountable_human: mirko
     human_approval_required: true
-    implementation_status: operational
+    implementation_status: planned
 
   - id: data_rag_engineer
     title: Data & RAG Engineer
@@ -77,70 +77,70 @@ roles:
     target_actor: data-agent
     accountable_human: yaw
     human_approval_required: true
-    implementation_status: operational
+    implementation_status: planned
 
   - id: agent_engineer
     title: Agent Engineer
     responsibility: LangGraph workflows, LangChain integration, agent state and tools
-    current_actor_type: hybrid
+    current_actor_type: human
     current_actor: muhammad
     target_actor_type: hybrid
     target_actor: muhammad, agentE-agent
     accountable_human: muhammad
     human_approval_required: true
-    implementation_status: operational
+    implementation_status: planned
 
   - id: integration_engineer
     title: Integration Engineer
     responsibility: Agent-to-agent and agent-to-system interfaces and handovers
-    current_actor_type: agent
+    current_actor_type: human
     current_actor: saad
     target_actor_type: agent
     target_actor: int-agent
     accountable_human: saad
     human_approval_required: true
-    implementation_status: operational
+    implementation_status: planned
 
   - id: qa_test_engineer
     title: QA & Test Engineer
     responsibility: pytest, regression testing, agent evaluation, quality evidence
-    current_actor_type: agent
+    current_actor_type: human
     current_actor: felix
     target_actor_type: agent
     target_actor: test-agent
     accountable_human: felix
     human_approval_required: true
-    implementation_status: operational
+    implementation_status: planned
 
   - id: devops_engineer
     title: DevOps Engineer
     responsibility: Docker, GitHub Actions, build, deployment and reproducibility
     current_actor_type: hybrid
-    current_actor: muhammad
+    current_actor: mirko, ops-agent (devops)
     target_actor_type: hybrid
-    target_actor: muhammad, dev-agent
-    accountable_human: muhammad
+    target_actor: mirko, ops-agent (devops)
+    accountable_human: mirko
     human_approval_required: true
-    implementation_status: operational
+    implementation_status: implemented
 
   - id: ai_safety_security_engineer
     title: AI Safety & Security Engineer
     responsibility: Tool permissions, guardrails, secrets, prompt and agent risks
-    current_actor_type: agent
+    current_actor_type: human
     current_actor: mirko
     target_actor_type: agent
     target_actor: safety-agent
     accountable_human: mirko
     human_approval_required: true
-    implementation_status: operational
+    implementation_status: planned
 
   - id: cost_observability_engineer
     title: Cost & Observability Engineer
     responsibility: Traces, runtime, token usage, cost model and cost optimization
-    current_actor_type: agent
-    current_actor: minh
-    target_actor_type: agent
-    target_actor: cost-agent
-    accountable_human: minh
+    current_actor_type: hybrid
+    current_actor: mirko, ops-agent (observability)
+    target_actor_type: hybrid
+    target_actor: mirko, ops-agent (observability)
+    accountable_human: mirko
     human_approval_required: true
-    implementation_status: operational
+    implementation_status: implemented
