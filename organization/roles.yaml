@@ -82,24 +82,24 @@ roles:
   - id: agent_engineer
     title: Agent Engineer
     responsibility: LangGraph workflows, LangChain integration, agent state and tools
-    current_actor_type: human
-    current_actor: muhammad
+    current_actor_type: hybrid
+    current_actor: muhammad, platform-agent
     target_actor_type: hybrid
-    target_actor: muhammad, agentE-agent
+    target_actor: muhammad, platform-agent
     accountable_human: muhammad
     human_approval_required: true
-    implementation_status: planned
+    implementation_status: operational
 
   - id: integration_engineer
     title: Integration Engineer
     responsibility: Agent-to-agent and agent-to-system interfaces and handovers
-    current_actor_type: human
-    current_actor: saad
+    current_actor_type: hybrid
+    current_actor: saad, platform-agent
     target_actor_type: agent
-    target_actor: int-agent
+    target_actor: platform-agent
     accountable_human: saad
     human_approval_required: true
-    implementation_status: planned
+    implementation_status: operational
 
   - id: qa_test_engineer
     title: QA & Test Engineer
