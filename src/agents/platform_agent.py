@@ -427,6 +427,11 @@ def run_platform_agent(
     raw = dict(state["result"])
     input_tokens, output_tokens = raw.pop("_usage", (None, None))
     result = PlatformAgentResult.model_validate(raw)
+    credits = estimate_cost_credits(
+        duration_seconds=duration,
+        input_tokens=input_tokens,
+        output_tokens=output_tokens,
+    )
     append_trace(
         {
             "run_id": run_id,
@@ -441,15 +446,50 @@ def run_platform_agent(
             "duration_seconds": round(duration, 4),
             "input_tokens": input_tokens,
             "output_tokens": output_tokens,
-            "estimated_cost_credits": estimate_cost_credits(
-                duration_seconds=duration,
-                input_tokens=input_tokens,
-                output_tokens=output_tokens,
-            ),
+            "estimated_cost_credits": credits,
         },
         trace_file,
     )
+    if llm is None and trace_file == DEFAULT_TRACE_FILE:
+        _append_usage_csv(
+            task_id=task.task_id,
+            role=task.assigned_role,
+            run_id=run_id,
+            workflow_id=task.workflow_id,
+            model=settings.llm_model,
+            duration=round(duration, 4),
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
+            credits=credits,
+        )
     return result
+
+
+def _append_usage_csv(
+    *,
+    task_id: str,
+    role: str,
+    run_id: str,
+    workflow_id: str,
+    model: str,
+    duration: float,
+    input_tokens: int | None,
+    output_tokens: int | None,
+    credits: float,
+) -> None:
+    from datetime import datetime, timezone
+
+    usage_path = REPO_ROOT / "costs" / "usage.csv"
+    if not usage_path.exists():
+        return
+    date_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    notes = (
+        f"run_id={run_id} workflow_id={workflow_id} model={model} "
+        f"calls=1 duration={duration}s input_tokens={input_tokens} output_tokens={output_tokens}"
+    )
+    row = f"{date_str},{task_id},agent,platform-agent ({role}),1,runs,{credits},{notes}\n"
+    with usage_path.open("a", encoding="utf-8") as handle:
+        handle.write(row)
 
 
 def run_platform_to_qa_workflow(

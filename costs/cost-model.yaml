@@ -1,31 +1,83 @@
-# COURSE TEMPLATE – teams must review the assumptions during Session 1.
+# COURSE TEMPLATE – teams must review the assumptions during Session 1 & Session 2.
 # Credits are intentionally abstract and are not euros.
-# If the instructor fixes common rates for all companies, do not change them.
-session: 1
-date: 2026-10-12
+# Official course rates (do not change):
+human:
+  default_hour_credits: 100
+
+agent:
+  call_base_credits: 1.0
+  runtime_credits_per_second: 0.01
+  input_credits_per_1k_tokens: 0.02
+  output_credits_per_1k_tokens: 0.04
+
+ci:
+  run_credits: 1.0
+  runs: 4
+
+session: 2
+date: 2026-10-19
 
 human_effort:
   team_size: 6
-  total_hours: 30.0
+  session_01_hours: 30.0
+  session_02_implementation_hours: 18.0
+  session_02_review_hours: 3.0
+  total_hours: 51.0
 
 agent_runs:
-  agent_name: "qa-test-agent"
-  task_id: "SESSION-01-QA"
-  total_runs: 3
-  model: "qwen3:4b"
-  tools_used:
-    - "run_pytest_tool"
-  total_duration_seconds: 1324.15
-  tokens:
-    input_tokens: 252
-    output_tokens: 4760
-    total_tokens: 5012
-    note: "Input/Output-Tokens für Run 1 waren vom Provider null"
+  session_01:
+    agent_name: "qa-test-agent"
+    task_id: "SESSION-01-QA"
+    total_runs: 3
+    model: "qwen3:4b"
+    tools_used:
+      - "run_pytest_tool"
+    total_duration_seconds: 1324.15
+    tokens:
+      input_tokens: 252
+      output_tokens: 4760
+      total_tokens: 5012
+      note: "Input/Output-Tokens für Run 1 waren vom Provider null"
+    agent_credits: 16.4369
 
-ci:
-  runs: 3
-  run_credits: 1.0
+  session_02:
+    model: "qwen3:4b"
+    tasks:
+      - task_id: "SESSION-02-PLAT-AE"
+        agent_name: "platform-agent"
+        role: "agent_engineer"
+        runs: 1
+        calls: 1
+        duration_seconds: 20.2603
+        input_tokens: 573
+        output_tokens: 768
+        tools_used:
+          - "inspect_agent_architecture_tool"
+        credits: 1.2448
+      - task_id: "DRYRUN-WORKITEMS-IE"
+        agent_name: "platform-agent"
+        role: "integration_engineer"
+        runs: 1
+        calls: 1
+        duration_seconds: 20.4326
+        input_tokens: 418
+        output_tokens: 768
+        tools_used:
+          - "inspect_integration_contracts_tool"
+        credits: 1.2434
+      - task_id: "SESSION-02-QUALITY"
+        agent_name: "qa-test-agent + security-agent"
+        role: "qa_test_engineer / ai_safety_security_engineer"
+        runs: 2
+        calls: 1
+        duration_seconds: 21.8
+        tools_used:
+          - "run_pytest_tool"
+          - "inspect_python"
+        credits: 1.2500
 
 credits_calculation:
-  total_credits: 19.44
-  notes: "Agent-Credits (16.44) + CI-Kosten (3 Läufe * 1.0 Credits)"
+  session_01_total_credits: 19.44
+  session_02_agent_credits: 3.7382
+  session_02_human_review_credits: 300.0
+  notes: "Actual per-task usage rows are tracked in costs/usage.csv and traces under evidence/session-02/."
