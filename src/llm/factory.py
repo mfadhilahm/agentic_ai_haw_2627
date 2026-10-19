@@ -6,7 +6,7 @@ from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from src.app.settings import Settings, get_settings
 
 
-def get_chat_model(settings: Settings | None = None) -> Any:
+def get_chat_model(settings: Settings | None = None, *, json_mode: bool = False) -> Any:
     """Return the configured LangChain chat-model abstraction.
 
     Team agents should depend on this factory (or an evolved equivalent), not
@@ -21,6 +21,8 @@ def get_chat_model(settings: Settings | None = None) -> Any:
             temperature=settings.llm_temperature,
             client_kwargs={"timeout": settings.llm_timeout_seconds},
             num_predict=settings.llm_max_output_tokens,
+            reasoning=False,
+            format="json" if json_mode else None,
         )
 
     if settings.llm_provider == "openai_compatible":
