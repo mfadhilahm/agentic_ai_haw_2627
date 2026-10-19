@@ -5,9 +5,8 @@ session: 1
 date: 2026-10-12
 
 human_effort:
-  team_size: 5
-  total_hours: 25.0
-
+  team_size: 6
+  total_hours: 30.0
 
 agent_runs:
   agent_name: "qa-test-agent"
