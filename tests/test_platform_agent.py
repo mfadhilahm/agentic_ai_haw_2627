@@ -167,3 +167,26 @@ def test_shared_engineering_task_used_by_platform_and_quality_agents(tmp_path) -
     assert len(traces) >= 2
     assert {t["workflow_id"] for t in traces} == {"WF-SHARED-001"}
     assert {t["task_id"] for t in traces} == {"SHARED-TASK-001"}
+
+
+def test_platform_to_qa_workflow_error_short_circuits_and_escalates(tmp_path) -> None:
+    trace_file = tmp_path / "workflow-error-trace.jsonl"
+    wf_result = run_platform_to_qa_workflow(
+        PlatformTask(
+            task_id="TEST-WF-ERR-001",
+            workflow_id="WF-HANDOVER-ERR-001",
+            assigned_role="integration_engineer",
+            input_files=["src/app/non_existent_endpoint.py"],
+            pytest_target="tests/starter/test_api.py",
+            timeout_seconds=30,
+        ),
+        platform_llm=FakePlatformLLM(),
+        qa_llm=FakeQALLM(),
+        human_decision="approved",
+        approved_by_human="saad",
+        trace_file=str(trace_file),
+    )
+    assert wf_result.platform_result.status == "error"
+    assert wf_result.qa_result is None
+    assert wf_result.human_gate_status == "escalate_to_human"
+

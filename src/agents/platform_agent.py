@@ -390,7 +390,7 @@ def run_platform_agent(
     settings = get_settings()
     started = time.perf_counter()
     graph = build_graph(llm)
-    state = graph.invoke({"task": task, "request": task})
+    state = graph.invoke({"task": task, "request": task}, {"recursion_limit": 6})
     duration = time.perf_counter() - started
     tool_used = state.get(
         "tool_used",
@@ -519,7 +519,7 @@ def run_platform_to_qa_workflow(
     builder.add_edge("human_gate", END)
 
     workflow = builder.compile()
-    final_state = workflow.invoke({"task": ptask})
+    final_state = workflow.invoke({"task": ptask}, {"recursion_limit": 6})
     return PlatformToQAWorkflowResult(
         workflow_id=ptask.workflow_id,
         task_id=ptask.task_id,
