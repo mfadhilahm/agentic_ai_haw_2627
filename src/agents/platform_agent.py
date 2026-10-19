@@ -13,7 +13,12 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from langgraph.graph import END, START, StateGraph
 from pydantic import BaseModel, Field, ValidationError
 
-from src.agents.qa_test_agent import QATestRequest, QATestResult, run_qa_agent
+from src.agents.qa_test_agent import QATestResult, run_qa_agent
+from src.agents.task_models import (
+    EngineeringTask,
+    HandoverPayload,
+    HumanGateDecision,
+)
 from src.app.settings import get_settings
 from src.llm.factory import get_chat_model
 from src.observability.tracing import (
@@ -26,30 +31,6 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_TRACE_FILE = "evidence/session-02/platform-agent-trace.jsonl"
 
 PlatformRole = Literal["agent_engineer", "integration_engineer"]
-HumanGateDecision = Literal[
-    "pending_approval", "approved", "changes_requested", "escalate_to_human"
-]
-
-
-class EngineeringTask(BaseModel):
-    """Shared task model across agents (Session 2, Task 3)."""
-
-    task_id: str = Field(min_length=3)
-    workflow_id: str = Field(
-        default_factory=lambda: str(uuid.uuid4()),
-        pattern=r"^[a-zA-Z0-9_-]+$",
-    )
-    task_type: str = Field(default="platform_check", min_length=1)
-    description: str = Field(
-        default="Inspect LangGraph agent architecture and integration contracts."
-    )
-    assigned_role: PlatformRole = "agent_engineer"
-    input_files: list[str] = Field(
-        default_factory=lambda: ["src/agents/qa_test_agent.py", "src/app/main.py"]
-    )
-    pytest_target: str = Field(default="tests/starter/test_api.py", min_length=1)
-    target_handover_role: str = Field(default="qa_test_engineer")
-    timeout_seconds: int = Field(default=180, ge=1, le=900)
 
 
 class PlatformFinding(BaseModel):
@@ -58,21 +39,9 @@ class PlatformFinding(BaseModel):
     description: str
 
 
-class HandoverPayload(BaseModel):
-    from_agent: str = "platform-agent"
-    from_role: PlatformRole
-    to_role: str
-    task_id: str
-    workflow_id: str
-    verified_files: list[str] = Field(default_factory=list)
-    pytest_target: str = "tests/starter/test_api.py"
-    ready_for_handover: bool = True
-    notes: str = ""
-
-
 class PlatformAgentResult(BaseModel):
     status: Literal["passed", "failed", "needs_review", "error"]
-    role_executed: PlatformRole
+    role_executed: str
     summary: str
     findings: list[PlatformFinding] = Field(default_factory=list)
     handover: HandoverPayload | None = None
@@ -502,12 +471,9 @@ def run_platform_to_qa_workflow(
     def qa_step(state: HandoverWorkflowState) -> HandoverWorkflowState:
         handover = state["platform_result"].handover
         assert handover is not None
-        qa_req = QATestRequest(
-            task_id=handover.task_id,
-            pytest_target=handover.pytest_target,
-            timeout_seconds=state["task"].timeout_seconds,
-        )
-        qres = run_qa_agent(qa_req, llm=qa_llm, trace_file=trace_file)
+        qa_task = handover.to_engineering_task()
+        qa_task.timeout_seconds = state["task"].timeout_seconds
+        qres = run_qa_agent(qa_task, llm=qa_llm, trace_file=trace_file)
         return {"qa_result": qres}
 
     def human_gate(state: HandoverWorkflowState) -> HandoverWorkflowState:

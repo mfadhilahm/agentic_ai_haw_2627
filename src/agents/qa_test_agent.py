@@ -14,6 +14,7 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from langgraph.graph import END, START, StateGraph
 from pydantic import BaseModel, Field, ValidationError
 
+from src.agents.task_models import EngineeringTask
 from src.app.settings import get_settings
 from src.llm.factory import get_chat_model
 from src.observability.tracing import (
@@ -46,7 +47,7 @@ class QATestResult(BaseModel):
 
 
 class QAState(TypedDict, total=False):
-    request: QATestRequest
+    request: EngineeringTask | QATestRequest
     pytest_output: str
     pytest_exit_code: int | None
     result: dict[str, Any]
@@ -255,12 +256,13 @@ def build_graph(llm: Any | None = None):
 
 
 def run_qa_agent(
-    request: QATestRequest,
+    request: EngineeringTask | QATestRequest,
     *,
     llm: Any | None = None,
     trace_file: str | None = DEFAULT_TRACE_FILE,
 ) -> QATestResult:
     run_id = str(uuid.uuid4())
+    workflow_id = getattr(request, "workflow_id", run_id)
     settings = get_settings()
     started = time.perf_counter()
     graph = build_graph(llm)
@@ -276,8 +278,10 @@ def run_qa_agent(
         append_trace(
             {
                 "run_id": run_id,
+                "workflow_id": workflow_id,
                 "task_id": request.task_id,
                 "agent": "qa-test-agent",
+                "role": "qa_test_engineer",
                 "model": settings.llm_model,
                 "status": result.status,
                 "tools": ["run_pytest_tool"],
@@ -294,8 +298,10 @@ def run_qa_agent(
     append_trace(
         {
             "run_id": run_id,
+            "workflow_id": workflow_id,
             "task_id": request.task_id,
             "agent": "qa-test-agent",
+            "role": "qa_test_engineer",
             "model": settings.llm_model,
             "status": result.status,
             "tools": ["run_pytest_tool"],

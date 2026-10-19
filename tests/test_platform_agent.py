@@ -132,3 +132,43 @@ def test_platform_to_qa_handover_workflow(tmp_path) -> None:
     assert wf_result.qa_result.status == "passed"
     assert wf_result.human_gate_status == "approved"
     assert wf_result.approved_by_human == "muhammad"
+
+
+def test_shared_engineering_task_used_by_both_agents(tmp_path) -> None:
+    from src.agents.qa_test_agent import run_qa_agent
+    from src.agents.task_models import EngineeringTask as SharedEngineeringTask
+
+    trace_file = tmp_path / "shared-task-trace.jsonl"
+    shared_task = SharedEngineeringTask(
+        task_id="SHARED-TASK-001",
+        workflow_id="WF-SHARED-001",
+        task_type="platform_and_qa_verification",
+        description="Shared EngineeringTask executed by both platform-agent and qa-test-agent.",
+        assigned_role="agent_engineer",
+        input_files=["src/agents/qa_test_agent.py"],
+        pytest_target="tests/starter/test_api.py",
+        timeout_seconds=30,
+    )
+
+    platform_res = run_platform_agent(
+        shared_task, llm=FakePlatformLLM(), trace_file=str(trace_file)
+    )
+    qa_res = run_qa_agent(
+        shared_task, llm=FakeQALLM(), trace_file=str(trace_file)
+    )
+
+    assert platform_res.status == "passed"
+    assert qa_res.status == "passed"
+
+    traces = [
+        json.loads(line)
+        for line in trace_file.read_text(encoding="utf-8").splitlines()
+    ]
+    assert len(traces) == 2
+    assert traces[0]["task_id"] == "SHARED-TASK-001"
+    assert traces[0]["workflow_id"] == "WF-SHARED-001"
+    assert traces[0]["agent"] == "platform-agent"
+    assert traces[1]["task_id"] == "SHARED-TASK-001"
+    assert traces[1]["workflow_id"] == "WF-SHARED-001"
+    assert traces[1]["agent"] == "qa-test-agent"
+
