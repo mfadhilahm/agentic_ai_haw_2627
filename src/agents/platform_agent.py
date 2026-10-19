@@ -15,9 +15,12 @@ from pydantic import BaseModel, Field, ValidationError
 
 from src.agents.qa_test_agent import QATestResult, run_qa_agent
 from src.agents.task_models import (
+    EngineeringState,
     EngineeringTask,
     HandoverPayload,
     HumanGateDecision,
+    PlatformRole,
+    PlatformTask,
 )
 from src.app.settings import get_settings
 from src.llm.factory import get_chat_model
@@ -29,8 +32,6 @@ from src.observability.tracing import (
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_TRACE_FILE = "evidence/session-02/platform-agent-trace.jsonl"
-
-PlatformRole = Literal["agent_engineer", "integration_engineer"]
 
 
 class PlatformFinding(BaseModel):
@@ -58,8 +59,8 @@ class PlatformToQAWorkflowResult(BaseModel):
     approved_by_human: str | None = None
 
 
-class PlatformState(TypedDict, total=False):
-    request: EngineeringTask
+class PlatformState(EngineeringState, total=False):
+    request: PlatformTask
     inspection_report: dict[str, Any]
     tool_used: str
     result: dict[str, Any]
@@ -67,11 +68,20 @@ class PlatformState(TypedDict, total=False):
 
 
 class HandoverWorkflowState(TypedDict, total=False):
-    task: EngineeringTask
+    task: PlatformTask
     platform_result: PlatformAgentResult
     qa_result: QATestResult | None
     human_gate_status: HumanGateDecision
     approved_by_human: str | None
+
+
+def _coerce_platform_task(request: EngineeringTask | PlatformTask | dict[str, Any]) -> PlatformTask:
+    if isinstance(request, PlatformTask):
+        return request
+    if isinstance(request, EngineeringTask):
+        data = request.model_dump()
+        return PlatformTask(**data)
+    return PlatformTask.model_validate(request)
 
 
 def _message_text(message: Any) -> str:
@@ -144,9 +154,7 @@ def inspect_integration_contracts_tool(
         tree = ast.parse(source)
         for node in ast.walk(tree):
             if isinstance(node, ast.ClassDef):
-                base_names = [
-                     getattr(base, "id", "") for base in node.bases
-                ]
+                base_names = [getattr(base, "id", "") for base in node.bases]
                 if "BaseModel" in base_names or "TypedDict" in base_names:
                     report["pydantic_models"].append(
                         {"file": rel_path, "model": node.name}
@@ -162,7 +170,7 @@ def inspect_integration_contracts_tool(
     return report
 
 
-def _parse_result(text: str, request: EngineeringTask) -> PlatformAgentResult:
+def _parse_result(text: str, request: PlatformTask) -> PlatformAgentResult:
     cleaned = text.strip()
     if cleaned.startswith("```"):
         cleaned = cleaned.strip("`")
@@ -372,38 +380,40 @@ def build_graph(llm: Any | None = None):
 
 
 def run_platform_agent(
-    request: EngineeringTask,
+    request: EngineeringTask | PlatformTask | dict[str, Any],
     *,
     llm: Any | None = None,
     trace_file: str | None = DEFAULT_TRACE_FILE,
 ) -> PlatformAgentResult:
+    task = _coerce_platform_task(request)
     run_id = str(uuid.uuid4())
     settings = get_settings()
     started = time.perf_counter()
     graph = build_graph(llm)
-    state = graph.invoke({"request": request})
+    state = graph.invoke({"task": task, "request": task})
     duration = time.perf_counter() - started
     tool_used = state.get(
         "tool_used",
         "inspect_agent_architecture_tool"
-        if request.assigned_role == "agent_engineer"
+        if task.assigned_role == "agent_engineer"
         else "inspect_integration_contracts_tool",
     )
 
     if state.get("error"):
         result = PlatformAgentResult(
             status="error",
-            role_executed=request.assigned_role,
+            role_executed=task.assigned_role,
             summary=state["error"],
             human_gate_status="escalate_to_human",
         )
         append_trace(
             {
                 "run_id": run_id,
-                "workflow_id": request.workflow_id,
-                "task_id": request.task_id,
+                "workflow_id": task.workflow_id,
+                "task": task.model_dump(mode="json"),
+                "task_id": task.task_id,
                 "agent": "platform-agent",
-                "role": request.assigned_role,
+                "role": task.assigned_role,
                 "model": settings.llm_model,
                 "status": result.status,
                 "tools": [tool_used],
@@ -420,10 +430,11 @@ def run_platform_agent(
     append_trace(
         {
             "run_id": run_id,
-            "workflow_id": request.workflow_id,
-            "task_id": request.task_id,
+            "workflow_id": task.workflow_id,
+            "task": task.model_dump(mode="json"),
+            "task_id": task.task_id,
             "agent": "platform-agent",
-            "role": request.assigned_role,
+            "role": task.assigned_role,
             "model": settings.llm_model,
             "status": result.status,
             "tools": [tool_used],
@@ -442,7 +453,7 @@ def run_platform_agent(
 
 
 def run_platform_to_qa_workflow(
-    task: EngineeringTask,
+    task: EngineeringTask | PlatformTask | dict[str, Any],
     *,
     platform_llm: Any | None = None,
     qa_llm: Any | None = None,
@@ -451,6 +462,7 @@ def run_platform_to_qa_workflow(
     trace_file: str | None = DEFAULT_TRACE_FILE,
 ) -> PlatformToQAWorkflowResult:
     """Agent-to-Agent LangGraph workflow: platform-agent -> structured handover -> qa-test-agent -> Human Gate."""
+    ptask = _coerce_platform_task(task)
 
     def platform_step(state: HandoverWorkflowState) -> HandoverWorkflowState:
         res = run_platform_agent(
@@ -471,8 +483,9 @@ def run_platform_to_qa_workflow(
     def qa_step(state: HandoverWorkflowState) -> HandoverWorkflowState:
         handover = state["platform_result"].handover
         assert handover is not None
-        qa_task = handover.to_engineering_task()
-        qa_task.timeout_seconds = state["task"].timeout_seconds
+        qa_task = handover.to_quality_task(
+            timeout_seconds=state["task"].timeout_seconds
+        )
         qres = run_qa_agent(qa_task, llm=qa_llm, trace_file=trace_file)
         return {"qa_result": qres}
 
@@ -506,10 +519,10 @@ def run_platform_to_qa_workflow(
     builder.add_edge("human_gate", END)
 
     workflow = builder.compile()
-    final_state = workflow.invoke({"task": task})
+    final_state = workflow.invoke({"task": ptask})
     return PlatformToQAWorkflowResult(
-        workflow_id=task.workflow_id,
-        task_id=task.task_id,
+        workflow_id=ptask.workflow_id,
+        task_id=ptask.task_id,
         platform_result=final_state["platform_result"],
         qa_result=final_state.get("qa_result"),
         human_gate_status=final_state["human_gate_status"],
@@ -535,7 +548,7 @@ def main() -> None:
     args = parser.parse_args()
 
     result = run_platform_agent(
-        EngineeringTask(
+        PlatformTask(
             task_id=args.task_id,
             assigned_role=args.role,
             input_files=args.files,

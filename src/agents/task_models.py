@@ -1,38 +1,37 @@
 from __future__ import annotations
 
-import uuid
 from typing import Literal
 
 from pydantic import BaseModel, Field
 
+from src.models.tasks import EngineeringState, EngineeringTask, QualityTask
+
+PlatformRole = Literal["agent_engineer", "integration_engineer"]
 HumanGateDecision = Literal[
     "pending_approval", "approved", "changes_requested", "escalate_to_human"
 ]
 
 
-class EngineeringTask(BaseModel):
-    """Shared technical task model used across multiple team agents (Session 2, Task 3)."""
+class PlatformTask(EngineeringTask):
+    """Platform-specific options extending the shared EngineeringTask from src/models/tasks.py."""
 
-    task_id: str = Field(min_length=3)
-    workflow_id: str = Field(
-        default_factory=lambda: str(uuid.uuid4()),
-        pattern=r"^[a-zA-Z0-9_-]+$",
-    )
-    task_type: str = Field(default="platform_check", min_length=1)
+    task_type: str = Field(default="platform_check", min_length=1, max_length=80)
     description: str = Field(
-        default="Inspect LangGraph agent architecture and integration contracts."
+        default="Inspect LangGraph agent architecture and integration contracts.",
+        min_length=1,
+        max_length=4000,
     )
-    assigned_role: str = Field(default="agent_engineer", min_length=1)
+    assigned_role: str = Field(default="agent_engineer", min_length=1, max_length=100)
     input_files: list[str] = Field(
         default_factory=lambda: ["src/agents/qa_test_agent.py", "src/app/main.py"]
     )
     pytest_target: str = Field(default="tests/starter/test_api.py", min_length=1)
-    target_handover_role: str = Field(default="qa_test_engineer")
-    timeout_seconds: int = Field(default=180, ge=1, le=900)
+    target_handover_role: str = Field(default="quality")
+    timeout_seconds: int = Field(default=180, ge=1, le=300)
 
 
 class HandoverPayload(BaseModel):
-    """Structured handover payload between agents."""
+    """Structured handover payload from platform-agent to QA/Quality agent."""
 
     from_agent: str = "platform-agent"
     from_role: str
@@ -44,13 +43,23 @@ class HandoverPayload(BaseModel):
     ready_for_handover: bool = True
     notes: str = ""
 
-    def to_engineering_task(self, description: str = "") -> EngineeringTask:
-        return EngineeringTask(
+    def to_quality_task(self, timeout_seconds: int = 60) -> QualityTask:
+        return QualityTask(
             task_id=self.task_id,
             workflow_id=self.workflow_id,
-            task_type="handover_verification",
-            description=description or self.notes or f"Handover from {self.from_role} to {self.to_role}",
-            assigned_role=self.to_role,
-            input_files=self.verified_files or [self.pytest_target],
+            description=self.notes or f"Handover from {self.from_role} to {self.to_role}",
+            input_files=self.verified_files or ["src/app/main.py"],
             pytest_target=self.pytest_target,
+            timeout_seconds=min(timeout_seconds, 300),
         )
+
+
+__all__ = [
+    "EngineeringState",
+    "EngineeringTask",
+    "HandoverPayload",
+    "HumanGateDecision",
+    "PlatformRole",
+    "PlatformTask",
+    "QualityTask",
+]
