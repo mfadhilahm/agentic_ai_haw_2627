@@ -500,7 +500,9 @@ def build_graph():
             result["recommendations"].append("LLM advice unavailable; complete the deterministic checks and human review.")
             return result
         try:
-            parsed = json.loads(answer or "")
+            cleaned = re.sub(r"<think>.*?</think>", "", answer or "", flags=re.S).strip()
+            cleaned = re.sub(r"^```(?:json)?\s*|\s*```$", "", cleaned, flags=re.I).strip()
+            parsed = json.loads(cleaned)
             if not isinstance(parsed, dict) or not isinstance(parsed.get("summary"), str) or not isinstance(parsed.get("recommendations"), list):
                 raise ValueError("Invalid advisory format")
             summary = parsed["summary"].strip()[:400]

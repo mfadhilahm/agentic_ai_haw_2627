@@ -22,7 +22,7 @@ class FakeLLM:
         return AIMessage(content=json.dumps({
             "summary": "Static audit completed; deployment remains subject to human review.",
             "recommendations": ["Review CI execution evidence before deploy."],
-        }), usage_metadata={"input_tokens": 100, "output_tokens": 40})
+        }), usage_metadata={"input_tokens": 100, "output_tokens": 40, "total_tokens": 140})
 
 
 def task(mode: str, task_id: str = "OPS-TEST-01", input_files: list[str] | None = None) -> EngineeringTask:
