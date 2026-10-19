@@ -49,30 +49,30 @@ roles:
   - id: software_architect
     title: Software Architect
     responsibility: System architecture, interfaces, ADRs, technical standards
-    current_actor_type: human
-    current_actor: minh
+    current_actor_type: hybrid
+    current_actor: minh, dev_architect_agent
     target_actor_type: hybrid
-    target_actor: minh, sa-agent
+    target_actor: minh, dev_architect_agent
     accountable_human: minh
-    human_approval_required: TBD
-    implementation_status: planned
+    human_approval_required: true
+    implementation_status: operational
 
   - id: backend_api_engineer
     title: Backend / API Engineer
     responsibility: FastAPI services, business logic, API contracts
-    current_actor_type: human
-    current_actor: mirko
+    current_actor_type: hybrid
+    current_actor: mirko, dev_architect_agent
     target_actor_type: hybrid
-    target_actor: mirko, bae-agent
+    target_actor: mirko, dev_architect_agent
     accountable_human: mirko
     human_approval_required: true
-    implementation_status: planned
+    implementation_status: operational
 
   - id: data_rag_engineer
     title: Data & RAG Engineer
     responsibility: PostgreSQL, pgvector, ingestion, chunking, retrieval, embeddings
-    current_actor_type: human
-    current_actor: yaw
+    current_actor_type: agent
+    current_actor: data-agent
     target_actor_type: agent
     target_actor: data-agent
     accountable_human: yaw
@@ -115,13 +115,13 @@ roles:
   - id: devops_engineer
     title: DevOps Engineer
     responsibility: Docker, GitHub Actions, build, deployment and reproducibility
-    current_actor_type: human
-    current_actor: muhammad
+    current_actor_type: hybrid
+    current_actor: mirko, ops-agent (devops)
     target_actor_type: hybrid
-    target_actor: muhammad, dev-agent
-    accountable_human: muhammad
+    target_actor: mirko, ops-agent (devops)
+    accountable_human: mirko
     human_approval_required: true
-    implementation_status: planned
+    implementation_status: implemented
 
   - id: ai_safety_security_engineer
     title: AI Safety & Security Engineer
@@ -137,10 +137,10 @@ roles:
   - id: cost_observability_engineer
     title: Cost & Observability Engineer
     responsibility: Traces, runtime, token usage, cost model and cost optimization
-    current_actor_type: human
-    current_actor: minh
-    target_actor_type: agent
-    target_actor: cost-agent
-    accountable_human: minh
+    current_actor_type: hybrid
+    current_actor: mirko, ops-agent (observability)
+    target_actor_type: hybrid
+    target_actor: mirko, ops-agent (observability)
+    accountable_human: mirko
     human_approval_required: true
-    implementation_status: planned
+    implementation_status: implemented

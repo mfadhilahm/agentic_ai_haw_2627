@@ -367,3 +367,7 @@ If a package change is necessary:
 3. document compatibility implications,
 4. request approval before merging the change.
 
+
+## Termin 2: Operations & Observability Agent (Mirko)
+
+Team-eigener LangGraph-Agent `ops-agent` zur **read-only** Unterstützung der Rollen `devops_engineer` und `cost_observability_engineer`. Er führt Docker-/CI-Konfigurationschecks durch, wertet lokale Ausführungstraces und Credits auf Task-Ebene aus und erstellt JSON-Reports/JSONL-Traces mit explizitem Human-Review-Punkt. Deployment erfolgt **nicht** automatisch. Siehe [`docs/OPS_AGENT.md`](docs/OPS_AGENT.md) für Setup, Testaufruf, CLI und Grenzen. Ein echter Ollama-/ICC-Lauf muss für die Termin-2-Evidenz separat ausgeführt werden.

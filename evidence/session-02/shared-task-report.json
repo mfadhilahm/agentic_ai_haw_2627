@@ -1,0 +1,52 @@
+{
+  "task": {
+    "task_id": "SESSION-02-QUALITY",
+    "task_type": "quality_review",
+    "description": "Run QA policy tests and inspect the API source for security risks.",
+    "assigned_role": "quality",
+    "input_files": [
+      "src/app/main.py"
+    ],
+    "workflow_id": "2ff2babb-bb88-4637-ba91-b785ce52f0e8",
+    "pytest_target": "tests/test_quality_policy.py",
+    "timeout_seconds": 60
+  },
+  "qa": {
+    "status": "passed",
+    "summary": "All quality policy tests passed successfully. No security risks detected in the API source.",
+    "pytest_exit_code": 0,
+    "findings": [],
+    "human_approval_required": true,
+    "summary_status": "ok",
+    "run_id": "e8f34857-689d-453b-9037-57ecf520fbb0",
+    "trace_path": "evidence\\session-02\\shared-task-trace.jsonl",
+    "tool_status": "completed"
+  },
+  "security": {
+    "status": "passed",
+    "checks": [
+      "artifact_path_boundary",
+      "dynamic_code_execution",
+      "shell_execution",
+      "literal_credentials",
+      "human_approval_policy",
+      "technical_status_integrity"
+    ],
+    "findings": [],
+    "artifact_sha256": {
+      "src/app/main.py": "59e302f7a1c63e4abc926ad6ae5d10a10b5eba57abdd7a41ae83ba3f4e0b87c5"
+    },
+    "human_approval_required": true,
+    "run_id": "d03f9708-3a89-4426-b03f-fe4fd7941ec0",
+    "trace_path": "evidence\\session-02\\shared-task-trace.jsonl"
+  },
+  "status": "awaiting_human_review",
+  "human_approval_required": true,
+  "human_decision": "pending",
+  "created_at": "2026-10-19T10:08:48.538412+00:00",
+  "source_version": {
+    "commit_sha": "1af2b2f24f8ab80bbe97945618d728faa8b67574",
+    "working_tree_dirty": true,
+    "source_sha256": "180b3d7fe983a07d250c5f8df16506e1ac008ce0fc2f748c988756049d6ff375"
+  }
+}
