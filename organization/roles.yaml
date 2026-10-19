@@ -22,7 +22,7 @@ roles:
     target_actor: yaw
     accountable_human: yaw
     human_approval_required: true
-    implementation_status: implemented
+    implementation_status: operational
 
   - id: product_owner_requirements
     title: Product Owner / Requirements Engineer
@@ -33,7 +33,7 @@ roles:
     target_actor: saad
     accountable_human: saad
     human_approval_required: true
-    implementation_status: implemented
+    implementation_status: operational
 
   - id: project_manager
     title: Project Manager
@@ -44,7 +44,7 @@ roles:
     target_actor: felix
     accountable_human: felix
     human_approval_required: true
-    implementation_status: implemented
+    implementation_status: operational
 
   - id: software_architect
     title: Software Architect
@@ -55,7 +55,7 @@ roles:
     target_actor: minh, sa-agent
     accountable_human: minh
     human_approval_required: TBD
-    implementation_status: planned
+    implementation_status: operational
 
   - id: backend_api_engineer
     title: Backend / API Engineer
@@ -66,7 +66,7 @@ roles:
     target_actor: mirko, bae-agent
     accountable_human: mirko
     human_approval_required: true
-    implementation_status: planned
+    implementation_status: operational
 
   - id: data_rag_engineer
     title: Data & RAG Engineer
@@ -77,7 +77,7 @@ roles:
     target_actor: data-agent
     accountable_human: yaw
     human_approval_required: true
-    implementation_status: planned
+    implementation_status: operational
 
   - id: agent_engineer
     title: Agent Engineer
@@ -88,7 +88,7 @@ roles:
     target_actor: muhammad, agentE-agent
     accountable_human: muhammad
     human_approval_required: true
-    implementation_status: planned
+    implementation_status: operational
 
   - id: integration_engineer
     title: Integration Engineer
@@ -99,7 +99,7 @@ roles:
     target_actor: int-agent
     accountable_human: saad
     human_approval_required: true
-    implementation_status: planned
+    implementation_status: operational
 
   - id: qa_test_engineer
     title: QA & Test Engineer
@@ -110,7 +110,7 @@ roles:
     target_actor: test-agent
     accountable_human: felix
     human_approval_required: true
-    implementation_status: planned
+    implementation_status: operational
 
   - id: devops_engineer
     title: DevOps Engineer
@@ -121,7 +121,7 @@ roles:
     target_actor: muhammad, dev-agent
     accountable_human: muhammad
     human_approval_required: true
-    implementation_status: planned
+    implementation_status: operational
 
   - id: ai_safety_security_engineer
     title: AI Safety & Security Engineer
@@ -132,7 +132,7 @@ roles:
     target_actor: safety-agent
     accountable_human: mirko
     human_approval_required: true
-    implementation_status: planned
+    implementation_status: operational
 
   - id: cost_observability_engineer
     title: Cost & Observability Engineer
@@ -143,4 +143,4 @@ roles:
     target_actor: cost-agent
     accountable_human: minh
     human_approval_required: true
-    implementation_status: planned
+    implementation_status: operational
