@@ -437,7 +437,7 @@ def run_qa_agent(
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--task-id", default="SESSION-01-QA")
+    parser.add_argument("--task-id", default="SESSION-02-QA")
     parser.add_argument("--pytest-target", default="tests/starter/test_api.py")
     parser.add_argument("--timeout-seconds", type=int, default=60)
     parser.add_argument("--trace-file", default=DEFAULT_TRACE_FILE)

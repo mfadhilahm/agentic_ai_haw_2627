@@ -12,7 +12,11 @@ class EngineeringTask(BaseModel):
 
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
 
-    task_id: str = Field(min_length=3, max_length=128)
+    task_id: str = Field(
+        min_length=3,
+        max_length=128,
+        pattern=r"^[A-Za-z0-9][A-Za-z0-9_-]*$",
+    )
     task_type: str = Field(min_length=1, max_length=80)
     description: str = Field(min_length=1, max_length=4000)
     assigned_role: str = Field(min_length=1, max_length=100)

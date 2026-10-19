@@ -50,23 +50,23 @@ roles:
     title: Software Architect
     responsibility: System architecture, interfaces, ADRs, technical standards
     current_actor_type: hybrid
-    current_actor: minh, sa-agent
+    current_actor: minh, dev_architect_agent
     target_actor_type: hybrid
-    target_actor: minh, sa-agent
+    target_actor: minh, dev_architect_agent
     accountable_human: minh
-    human_approval_required: TBD
-    implementation_status: planned
+    human_approval_required: true
+    implementation_status: operational
 
   - id: backend_api_engineer
     title: Backend / API Engineer
     responsibility: FastAPI services, business logic, API contracts
-    current_actor_type: human
-    current_actor: mirko
+    current_actor_type: hybrid
+    current_actor: mirko, dev_architect_agent
     target_actor_type: hybrid
-    target_actor: mirko, bae-agent
+    target_actor: mirko, dev_architect_agent
     accountable_human: mirko
     human_approval_required: true
-    implementation_status: planned
+    implementation_status: operational
 
   - id: data_rag_engineer
     title: Data & RAG Engineer

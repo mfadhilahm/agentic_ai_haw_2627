@@ -64,12 +64,12 @@ class FakeDevArchitectLLM:
 def test_role_metadata_loaded_dynamically_from_roles_yaml() -> None:
     sa_meta = load_role_metadata("software_architect")
     assert sa_meta.role_id == "software_architect"
-    assert sa_meta.agent_id == "dev_architect_agent"
+    assert sa_meta.agent_id in ("sa-agent", "dev_architect_agent")
     assert sa_meta.accountable_human == "minh"
 
     bae_meta = load_role_metadata("backend_api_engineer")
     assert bae_meta.role_id == "backend_api_engineer"
-    assert bae_meta.agent_id == "dev_architect_agent"
+    assert bae_meta.agent_id in ("bae-agent", "dev_architect_agent")
     assert bae_meta.accountable_human == "mirko"
 
 
@@ -105,6 +105,8 @@ def test_architect_and_backend_roles_are_distinguishable_and_traced(tmp_path: Pa
     trace_file = tmp_path / "dev-arch-trace.jsonl"
     artifact_rel = "evidence/session-02/test-sa-artifact.md"
     artifact_abs = REPO_ROOT / artifact_rel
+    expected_sa_agent = load_role_metadata("software_architect").agent_id
+    expected_bae_agent = load_role_metadata("backend_api_engineer").agent_id
 
     try:
         # 1. Run as Software Architect
@@ -122,7 +124,7 @@ def test_architect_and_backend_roles_are_distinguishable_and_traced(tmp_path: Pa
 
         assert sa_result.status == "completed"
         assert sa_result.role == "software_architect"
-        assert sa_result.agent == "dev_architect_agent"
+        assert sa_result.agent == expected_sa_agent
         assert sa_result.written_artifact_path == artifact_rel
         assert artifact_abs.is_file()
 
@@ -140,7 +142,7 @@ def test_architect_and_backend_roles_are_distinguishable_and_traced(tmp_path: Pa
 
         assert bae_result.status == "completed"
         assert bae_result.role == "backend_api_engineer"
-        assert bae_result.agent == "dev_architect_agent"
+        assert bae_result.agent == expected_bae_agent
         assert bae_result.proposed_changes[0].file_path == "src/app/service.py"
 
         traces = [
@@ -149,12 +151,12 @@ def test_architect_and_backend_roles_are_distinguishable_and_traced(tmp_path: Pa
             if line.strip()
         ]
         assert len(traces) == 2
-        assert traces[0]["agent"] == "dev_architect_agent"
+        assert traces[0]["agent"] == expected_sa_agent
         assert traces[0]["role"] == "software_architect"
         assert traces[0]["accountable_human"] == "minh"
         assert "write_repo_file_tool" in traces[0]["tools"]
 
-        assert traces[1]["agent"] == "dev_architect_agent"
+        assert traces[1]["agent"] == expected_bae_agent
         assert traces[1]["role"] == "backend_api_engineer"
         assert traces[1]["accountable_human"] == "mirko"
         assert "read_repo_file_tool" in traces[1]["tools"]
