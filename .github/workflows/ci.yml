@@ -52,7 +52,8 @@ jobs:
         shell: bash
         run: |
           mkdir -p logs
-          python -m pytest -q --junitxml=logs/pytest.xml 2>&1 | tee logs/pytest.txt
+          set -o pipefail
+          python -m pytest -ra --junitxml=logs/pytest.xml 2>&1 | tee logs/pytest.txt
 
       - name: Save test evidence
         if: always()
