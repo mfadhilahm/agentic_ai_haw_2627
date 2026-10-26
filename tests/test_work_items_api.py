@@ -10,6 +10,7 @@ from fastapi.testclient import TestClient
 
 from src.app import db as app_db
 from src.app.main import app
+from src.app.settings import get_settings
 
 
 def _postgres_reachable() -> bool:
@@ -124,17 +125,38 @@ def test_work_items_validation_rejects_empty_title() -> None:
 )
 def test_work_items_postgresql_persistence() -> None:
     app_db.init_work_items_schema()
-    created = app_db.create_work_item(
-        title="PostgreSQL persistence check",
-        description="Verify row is stored in PostgreSQL work_items table",
-        assigned_role="data_rag_engineer",
+    client = TestClient(app)
+
+    create_resp = client.post(
+        "/work-items",
+        json={
+            "title": "PostgreSQL API persistence check",
+            "description": "Verify HTTP POST /work-items commits to real PostgreSQL table",
+            "assigned_role": "data_rag_engineer",
+        },
     )
-    item_id = created["id"]
+    assert create_resp.status_code == 201
+    item_id = create_resp.json()["id"]
+
     try:
-        items = app_db.list_work_items(status="open")
-        assert any(i["id"] == item_id for i in items)
-        completed = app_db.complete_work_item(item_id)
-        assert completed is not None
-        assert completed["status"] == "done"
+        # Verify committed row across an independent PostgreSQL connection
+        with psycopg.connect(get_settings().database_url) as verify_conn:
+            row = verify_conn.execute(
+                "SELECT title, status, assigned_role FROM work_items WHERE id = %s",
+                (item_id,),
+            ).fetchone()
+            assert row == ("PostgreSQL API persistence check", "open", "data_rag_engineer")
+
+        complete_resp = client.patch(f"/work-items/{item_id}/complete")
+        assert complete_resp.status_code == 200
+        assert complete_resp.json()["status"] == "done"
+
+        with psycopg.connect(get_settings().database_url) as verify_conn:
+            row_done = verify_conn.execute(
+                "SELECT status, completed_at IS NOT NULL FROM work_items WHERE id = %s",
+                (item_id,),
+            ).fetchone()
+            assert row_done == ("done", True)
     finally:
-        assert app_db.delete_work_item(item_id) is True
+        del_resp = client.delete(f"/work-items/{item_id}")
+        assert del_resp.status_code == 204

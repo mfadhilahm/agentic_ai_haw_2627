@@ -1,13 +1,28 @@
 date,task_id,actor_type,actor,quantity,unit,credits,notes
-2026-10-12,SESSION-01-SETUP,human,Sebastian,1.5,hours,150.0,Estimated human time for setup review company model architecture and agent implementation
+2026-10-12,SESSION-01-SETUP,human,Sebastian,1.5,hours,150.0,Review and setup of company model architecture and initial QA agent implementation
 2026-10-12,SESSION-01-QA,agent,qa-test-agent,3,runs,16.4369,Model qwen3:4b; total duration 1324.1468 seconds; two successful traces and one timeout escalation; recorded tokens 252 input and 4760 output where available
 2026-10-12,SESSION-01-TESTS,human,Sebastian,1,local_pytest_run,0.0,Local verification run completed with 6 passed tests
 2026-10-12,SESSION-01-CI,ci,GitHub Actions,0,runs,0.0,No GitHub CI run observed locally during this Termin 1 completion
-2026-10-19,SESSION-02-PLAT-AE,agent,platform-agent (agent_engineer),1,runs,1.2448,run_id=46ee4e55-be12-4e4e-b6dd-bb08bdaae33d workflow_id=6f30c3fa-e604-4a5c-a69a-7131061fe36f model=qwen3:4b calls=1 duration=20.2603s input_tokens=573 output_tokens=768
-2026-10-19,DRYRUN-WORKITEMS-IE,agent,platform-agent (integration_engineer),1,runs,1.2434,run_id=5513fa3e-50c4-483d-9994-cbfb5c5cf385 workflow_id=d6275b2f-b5f9-431f-bf6a-c446f4cdde05 model=qwen3:4b calls=1 duration=20.4326s input_tokens=418 output_tokens=768
-2026-10-19,SESSION-02-QUALITY,agent,qa-test-agent,1,runs,1.1728,run_id=eb516f41-3609-4633-bfeb-25eb26d252e3 workflow_id=609ac83f-8efd-4598-b976-fc96fbe4fb94 model=qwen3:4b calls=1 duration=16.6529s input_tokens=227 output_tokens=44
-2026-10-19,SESSION-02-QUALITY,agent,quality-security-checker,1,runs,0.0001,run_id=5bc13dec-2385-412d-9284-644aa712e296 workflow_id=609ac83f-8efd-4598-b976-fc96fbe4fb94 deterministic security check duration=0.0051s
-2026-10-19,SESSION-02-PLATFORM,human,muhammad,1.5,hours,150.0,Implementation and human review of platform-agent (agent_engineer and integration_engineer) and handover workflow
-2026-10-19,DRYRUN-WORKITEMS-IE,human,saad,0.5,hours,50.0,Human review and approval of integration contracts and Work-Item API handover
-2026-10-19,SESSION-02-QUALITY,human,felix,0.5,hours,50.0,Human review of QA and security report for Session 2 Dry Run
-2026-10-19,SESSION-02-CI,ci,GitHub Actions,1,runs,1.0,Session 2 CI verification run
+2026-10-19,SESSION-02-PLAT-AE,agent,platform-agent (agent_engineer),2,runs,2.3544,Includes 1 initial fallback/retry (run_id=69b275ef 1.1096 credits) and 1 passed run (run_id=46ee4e55 1.2448 credits; model=qwen3:4b input_tokens=573 output_tokens=768)
+2026-10-19,SESSION-02-PLAT-IE,agent,platform-agent (integration_engineer),1,runs,1.1084,Failed/fallback attempt before Ollama startup (run_id=e5c2ed56 duration=10.8358s status=needs_review)
+2026-10-19,DRYRUN-WORKITEMS-IE,agent,platform-agent (integration_engineer),3,runs,3.5692,Includes 1 failed/fallback attempt (run_id=3c0be835 1.1020 credits) and 2 passed runs (run_id=5513fa3e 1.2434 credits and run_id=d25e154f 1.2238 credits; model=qwen3:4b)
+2026-10-19,SESSION-02-QUALITY,agent,qa-test-agent,6,runs,7.6974,Includes 2 initial LLM timeout attempts (run_id=85f6fdaf 1.3628 credits and run_id=7147363d 1.5069 credits) and 4 passed retries after json_mode/timeout fix (bd4a87c6 1.2265 + e8f34857 1.2369 + dcb76715 1.1915 + eb516f41 1.1728)
+2026-10-19,SESSION-02-QUALITY,agent,quality-security-checker,6,runs,0.0004,Deterministic Python AST security checks paired with SESSION-02-QUALITY QA runs (0 LLM calls)
+2026-10-19,SESSION-02-ARCH-001,agent,sa-agent (software_architect),1,runs,1.1370,Initial run via openai_compatible config (run_id=00bbda85 model=gemini-3.5-flash-lite duration=6.5617s input_tokens=654 output_tokens=1458)
+2026-10-19,SESSION-02-DEV-001,agent,bae-agent (backend_api_engineer),2,runs,2.7396,Includes 1 timeout attempt (run_id=424c6466 60.2069s 1.6021 credits) and 1 retry (run_id=9dbe63cf 4.9442s 1.1375 credits)
+2026-10-19,data-summary-session02,agent,data-agent (data_rag_engineer),5,runs,10.5341,Includes 3 failed/timeout attempts (61fbd66b 2.2122 + 353424f6 2.2012 + 13dba66d 3.0367) and 2 successful retries (6d82cfcb 1.5968 + ca2b4646 1.4872) on Ollama qwen3:4b
+2026-10-19,SESSION-02-PLATFORM,human,muhammad,1.5,hours,150.0,Review and correction of platform-agent implementation and human gate enforcement
+2026-10-19,DRYRUN-WORKITEMS-IE,human,saad,0.5,hours,50.0,Review and approval of integration contracts and Work-Item API handover
+2026-10-19,SESSION-02-QUALITY,human,felix,0.75,hours,75.0,Review and correction of QA timeout handling and security report for Session 2
+2026-10-19,SESSION-02-DEV-001,human,mirko,1.0,hours,100.0,Correction and review of Work-Item backend API and database persistence
+2026-10-19,data-summary-session02,human,yaw,0.75,hours,75.0,Correction of data-agent truncation limits and review of chunking output
+2026-10-19,SESSION-02-CI,ci,GitHub Actions,2,runs,2.0,Session 2 CI verification runs
+2026-10-26,SESSION-02-ARCH-002,agent,dev_architect_agent (software_architect),1,runs,1.2220,Course-compliant Ollama qwen3:4b execution (run_id=2434605e duration=17.0232s input_tokens=2090 output_tokens=248)
+2026-10-26,SESSION-02-DEV-002,agent,dev_architect_agent (backend_api_engineer),2,runs,2.2257,Includes 1 needs_review attempt (run_id=f32fab88 1.1145 credits) and 1 completed retry (run_id=74e3ea19 1.1112 credits) on Ollama qwen3:4b
+2026-10-26,DRYRUN-WORKITEMS-E2E,agent,platform-agent + qa-test-agent + security-agent,5,runs,4.5993,Fresh end-to-end workflow WF-WORKITEMS-E2E-001 including 1 initial failed platform attempt (cbfb8627 1.1411) and passed platform->QA->Quality runs (e4da7b40 1.1533 + 20536e6a 1.1540 + c2b469b9 1.1507 + 8ca1c3c6 0.0002)
+2026-10-26,SESSION-02-OPS-DEVOPS,agent,ops-agent (devops_engineer),2,runs,2.3487,Includes 1 initial needs_review run (run_id=839843c1 1.1766 credits) and 1 passed run with compose validation (run_id=80df4ca0 1.1721 credits; model=qwen3:4b)
+2026-10-26,SESSION-02-OPS-COST,agent,ops-agent (cost_observability_engineer),2,runs,2.3487,Cost and trace audit runs for DRYRUN-WORKITEMS-E2E on Ollama qwen3:4b (run_id=6ebc185a 1.1754 + run_id=f7111fc9 1.1733 credits)
+2026-10-26,DRYRUN-WORKITEMS-E2E,human,saad,0.5,hours,50.0,Review and approval of fresh E2E Work-Item workflow report (platform-qa-workflow-report.review.json) and PostgreSQL persistence
+2026-10-26,DRYRUN-WORKITEMS-E2E,human,felix,0.25,hours,25.0,Review and approval of fresh E2E Quality & AST Security report (work-items-quality-report.review.json)
+2026-10-26,SESSION-02-OPS-DEVOPS,human,mirko,0.5,hours,50.0,Review and approval of Ops DevOps & Cost Observability reports (ops-reports/*.review.json)
+2026-10-26,DRYRUN-WORKITEMS-E2E,ci,GitHub Actions,1,runs,1.0,CI verification run for E2E Work-Item workflow

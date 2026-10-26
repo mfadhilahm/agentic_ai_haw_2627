@@ -1,0 +1,9 @@
+{
+  "task_id": "SESSION-02-OPS-COST",
+  "run_id": "f7111fc9-f8c4-45a0-b83c-395534c7fad2",
+  "reviewer": "mirko",
+  "decision": "approved",
+  "report_sha256": "1e58e47b3ec9efb6ccf95197b426c0f8d00b5a65c2396d0116eb9bae2811a7ee",
+  "reviewed_at": "2026-10-26T08:30:13.284542Z",
+  "notes": "Verified trace cost aggregation including failed attempts, retries, human review hours, and CI credits."
+}

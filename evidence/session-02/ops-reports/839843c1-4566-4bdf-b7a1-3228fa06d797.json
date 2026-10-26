@@ -1,0 +1,65 @@
+{
+  "run_id": "839843c1-4566-4bdf-b7a1-3228fa06d797",
+  "workflow_id": "WF-WORKITEMS-E2E-001",
+  "task_id": "SESSION-02-OPS-DEVOPS",
+  "role_id": "devops_engineer",
+  "agent": "ops-agent",
+  "capability": "devops",
+  "status": "needs_review",
+  "summary": "DevOps configuration checked; human deployment approval is still required.",
+  "findings": [],
+  "recommendations": [
+    "LLM advice was invalid; human review required."
+  ],
+  "devops": {
+    "files_checked": [
+      ".dockerignore",
+      ".github/workflows/ci.yml",
+      "Dockerfile",
+      "docker-compose.yml",
+      "requirements.txt"
+    ],
+    "checks": [
+      {
+        "code": "ci_pytest",
+        "status": "pass",
+        "detail": "CI must execute python -m pytest."
+      },
+      {
+        "code": "ci_compose_config",
+        "status": "pass",
+        "detail": "CI should validate Docker Compose configuration."
+      },
+      {
+        "code": "ci_python_312",
+        "status": "pass",
+        "detail": "CI should use Python 3.12."
+      },
+      {
+        "code": "compose_db_health",
+        "status": "pass",
+        "detail": "Compose should require a healthy database."
+      },
+      {
+        "code": "docker_python_312",
+        "status": "pass",
+        "detail": "Docker image should use the course Python 3.12 baseline."
+      },
+      {
+        "code": "pinned_dependencies",
+        "status": "pass",
+        "detail": "Dependencies must remain pinned to the course versions."
+      },
+      {
+        "code": "deploy_human_gate",
+        "status": "skipped",
+        "detail": "This static audit cannot prove a human-approved production deployment."
+      }
+    ],
+    "compose_validation": "passed"
+  },
+  "observability": null,
+  "human_approval_required": true,
+  "approval_decision": "pending",
+  "llm_status": "failed"
+}

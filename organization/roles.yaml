@@ -73,8 +73,8 @@ roles:
     responsibility: PostgreSQL, pgvector, ingestion, chunking, retrieval, embeddings
     current_actor_type: hybrid
     current_actor: yaw, data-agent
-    target_actor_type: agent
-    target_actor: data-agent
+    target_actor_type: hybrid
+    target_actor: yaw, data-agent
     accountable_human: yaw
     human_approval_required: true
     implementation_status: operational
@@ -95,8 +95,8 @@ roles:
     responsibility: Agent-to-agent and agent-to-system interfaces and handovers
     current_actor_type: hybrid
     current_actor: saad, platform-agent
-    target_actor_type: agent
-    target_actor: platform-agent
+    target_actor_type: hybrid
+    target_actor: saad, platform-agent
     accountable_human: saad
     human_approval_required: true
     implementation_status: operational
@@ -106,8 +106,8 @@ roles:
     responsibility: pytest, regression testing, agent evaluation, quality evidence
     current_actor_type: hybrid
     current_actor: felix, qa-test-agent
-    target_actor_type: agent
-    target_actor: qa-test-agent
+    target_actor_type: hybrid
+    target_actor: felix, qa-test-agent
     accountable_human: felix
     human_approval_required: true
     implementation_status: operational
@@ -125,11 +125,11 @@ roles:
 
   - id: ai_safety_security_engineer
     title: AI Safety & Security Engineer
-    responsibility: Tool permissions, guardrails, secrets, prompt and agent risks
+    responsibility: Tool permissions, guardrails, secrets, prompt and agent risks (supported by deterministic Python AST security-agent checker)
     current_actor_type: hybrid
-    current_actor: mirko, security-agent
-    target_actor_type: agent
-    target_actor: security-agent
+    current_actor: mirko, security-agent (deterministic AST checker)
+    target_actor_type: hybrid
+    target_actor: mirko, security-agent (deterministic AST checker)
     accountable_human: mirko
     human_approval_required: true
     implementation_status: operational
