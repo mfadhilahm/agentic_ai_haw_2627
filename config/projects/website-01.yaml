@@ -1,0 +1,55 @@
+# Session 3 Customer Project Configuration (A1: Separation and Addressing)
+project_id: "website-01"
+customer_name: "Nordwerk Industrie-Service"
+customer_task_id: "NW-S3-001"
+session: 3
+
+# Relative path from the Software Factory repository root to the separate product checkout
+product_repo_path: "../client-01-website"
+
+# Allowed writable directory prefixes inside the product checkout (A4 sandbox)
+allowed_write_prefixes:
+  - "site/"
+
+# Input files in the product checkout inspected by the Factory
+product_input_files:
+  - "docs/issue-01-session-03.md"
+  - "site/index.html"
+  - "site/styles.css"
+
+# Target product file modified by the implementation agent
+target_product_file: "site/index.html"
+
+# Separate automated product check executed in the product checkout (B4)
+product_test_target: "tests/test_website_s3.py"
+product_test_command: "python -m unittest discover -s tests -p \"test_*.py\" -v"
+product_start_command: "python -m http.server 8080 --directory site"
+
+# Bounded retry/correction loop before human escalation (A4)
+max_correction_loops: 2
+
+# Accountable humans for Session 3 (D1)
+accountable_humans:
+  commission_lead: "yaw"
+  requirements_owner: "saad"
+  project_manager: "felix"
+  architecture: "minh"
+  technical_delivery: "mirko"
+  agent_and_integration: "muhammad"
+  qa_and_checks: "felix"
+  release_approval: "saad"
+
+# Session 3 Scope & Required Verbatim Content (B1, B2, B3, B6)
+acceptance_criteria_in_scope:
+  - "AC-01"
+  - "AC-02 (N-03)"
+  - "AC-04"
+
+required_content:
+  N-01: "Nordwerk Industrie-Service"
+  N-02: "Praktische Unterstützung für Ihren technischen Betrieb."
+  N-03_title: "Wartungsplanung"
+  N-03_text: "Wir strukturieren Wartungsaufgaben und dokumentieren Zuständigkeiten für kleine technische Betriebe."
+  N-08_label: "Anfrage stellen"
+  N-08_href: "mailto:kontakt@nordwerk.example"
+  N-09: "Fiktives Unternehmen – Lehrprojekt der HAW Hamburg. Keine realen Angebote oder Kontaktaufnahme."

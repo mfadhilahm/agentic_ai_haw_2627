@@ -54,12 +54,80 @@ class HandoverPayload(BaseModel):
         )
 
 
+class CustomerDeliveryTask(EngineeringTask):
+    """Session 3 customer product delivery task addressing an external product checkout."""
+
+    task_id: str = Field(default="NW-S3-001", min_length=3, max_length=128)
+    task_type: str = Field(default="customer_product_delivery", min_length=1, max_length=80)
+    description: str = Field(
+        default=(
+            "Deliver the Nordwerk Industrie-Service Session 3 website slice "
+            "(AC-01, AC-02 service N-03, AC-04) in the customer repository."
+        ),
+        min_length=1,
+        max_length=4000,
+    )
+    assigned_role: str = Field(default="software_architect", min_length=1, max_length=100)
+    project_id: str = Field(default="website-01", min_length=1, max_length=100)
+    product_repo_path: str = Field(default="../client-01-website", min_length=1, max_length=512)
+    input_files: list[str] = Field(
+        default_factory=lambda: ["docs/issue-01-session-03.md", "site/index.html"]
+    )
+    target_product_file: str = Field(default="site/index.html", min_length=1, max_length=256)
+    product_test_target: str = Field(default="tests/test_website_s3.py", min_length=1, max_length=256)
+    allowed_write_prefixes: list[str] = Field(default_factory=lambda: ["site/"])
+    max_correction_loops: int = Field(default=2, ge=1, le=5)
+    timeout_seconds: int = Field(default=180, ge=1, le=300)
+
+
+class ProductHandoverPayload(BaseModel):
+    """Structured handover from Planning/Architecture capability to Implementation capability."""
+
+    from_agent: str = "dev_architect_agent"
+    from_role: str = "software_architect"
+    to_role: str = "backend_api_engineer"
+    project_id: str
+    task_id: str
+    workflow_id: str
+    product_repo_path: str
+    target_product_file: str = "site/index.html"
+    acceptance_criteria: list[str] = Field(
+        default_factory=lambda: ["AC-01", "AC-02 (N-03)", "AC-04"]
+    )
+    required_content: dict[str, str] = Field(default_factory=dict)
+    architecture_decisions: list[str] = Field(default_factory=list)
+    ready_for_implementation: bool = True
+
+
+class QAHandoverPayload(BaseModel):
+    """Structured handover from Implementation capability to Product QA capability."""
+
+    from_agent: str = "dev_architect_agent"
+    from_role: str = "backend_api_engineer"
+    to_role: str = "qa_test_engineer"
+    project_id: str
+    task_id: str
+    workflow_id: str
+    product_repo_path: str
+    modified_files: list[str] = Field(default_factory=list)
+    artifact_sha256: str = ""
+    product_test_target: str = "tests/test_website_s3.py"
+    acceptance_criteria: list[str] = Field(
+        default_factory=lambda: ["AC-01", "AC-02 (N-03)", "AC-04"]
+    )
+    iteration: int = 1
+    ready_for_qa: bool = True
+
+
 __all__ = [
+    "CustomerDeliveryTask",
     "EngineeringState",
     "EngineeringTask",
     "HandoverPayload",
     "HumanGateDecision",
     "PlatformRole",
     "PlatformTask",
+    "ProductHandoverPayload",
+    "QAHandoverPayload",
     "QualityTask",
 ]

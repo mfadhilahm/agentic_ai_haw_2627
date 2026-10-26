@@ -1,0 +1,38 @@
+{
+  "company": "HAW Agentic Software Factory",
+  "session": 3,
+  "project_id": "website-01",
+  "customer_task_id": "NW-S3-001",
+  "team_size": 6,
+  "factory_commit": "c6b8348ccbb1a6f83e8082a18807270331e142d2",
+  "product_input_commit": "15d7ce55ba48effe15904833b0b9df819552a6d5",
+  "product_output_commit": "5b9aefa412a67cf3350c5aac98c856a099d72bec",
+  "workflow_ids": [
+    "WF-WEBSITE01-S3-002"
+  ],
+  "run_ids": [
+    "0f80f57a-ea68-4719-ae6d-597541d8a3d8",
+    "f94402cb-6d67-44e0-b4e9-410c8188f5b4",
+    "89972355-4ca8-48fe-8a7d-ae1de042f0a3"
+  ],
+  "llm_provider": "ollama",
+  "llm_model": "qwen3:4b",
+  "model_tag_or_digest": "qwen3:4b@359d7dd4bcda",
+  "test_commands": [
+    "python -m pytest -q",
+    "python -m pytest tests/test_website_s3.py -q (in ../client-01-website)"
+  ],
+  "product_test_passed": true,
+  "iterations_used": 1,
+  "max_correction_loops": 2,
+  "mock_runs_are_separate": false,
+  "review_file": "C:\\Hochschule\\Module\\Semester 5\\Agentic AI\\agentic_ai_haw_2627\\runs\\website-01\\WF-WEBSITE01-S3-002\\review.json",
+  "artifact_hashes": {
+    "site/index.html": "9424b48c5f309148cc95abbf49180d62fa5df290de0f5652d20fb2fb0a1f460b"
+  },
+  "issue_and_pr_references": [
+    "../client-01-website/docs/issue-01-session-03.md"
+  ],
+  "cost_records": "costs/usage.csv",
+  "total_estimated_agent_credits": 5.1814
+}

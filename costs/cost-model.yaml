@@ -1,4 +1,4 @@
-# COURSE TEMPLATE – teams must review the assumptions during Session 1 & Session 2.
+# COURSE TEMPLATE – teams must review the assumptions during Session 1, Session 2 & Session 3.
 # Credits are intentionally abstract and are not euros.
 # Official course rates (do not change):
 human:
@@ -12,17 +12,60 @@ agent:
 
 ci:
   run_credits: 1.0
-  runs: 3
+  runs: 4
 
-session: 2
+session: 3
 date: 2026-10-26
+
+# -----------------------------------------------------------------------------
+# Session 3–5 Customer Project 01 (Nordwerk Industrie-Service) Budget Plan (C3)
+# -----------------------------------------------------------------------------
+# Per Client Brief: delivery plan budget for S3/S4 is agreed and tracked
+# separately from Factory development, plus an explicit reserve for S5
+# (CR-01 change request and SR-01 security advisory).
+customer_project_01_budget_plan:
+  project_id: "website-01"
+  customer_name: "Nordwerk Industrie-Service"
+  baseline_justification: >
+    Team of 6 engineers. Customer delivery (scaffolding, AC scoping, product checks,
+    human visual/accessibility review, and minor rework) is budgeted separately from
+    reusable Software Factory engineering.
+  s3_s4_delivery_plan_budget:
+    human_delivery_hours: 3.5          # 1.0h S3 initial slice + 2.5h S4 full AC-01..AC-08
+    human_review_hours: 1.5            # 0.5h S3 review + 1.0h S4 responsive/a11y review
+    human_rework_hours: 1.0            # 0.25h S3 rework + 0.75h S4 layout/test fixes
+    planned_human_delivery_credits: 600.0
+    planned_agent_credits: 25.0        # ~12-15 multi-agent workflow calls across S3 & S4
+    planned_ci_credits: 6.0            # ~6 CI runs across S3 & S4
+    total_s3_s4_delivery_budget_credits: 631.0
+  s5_reserve_budget:
+    justification: >
+      Reserved strictly for Session 5 unknown change request (CR-01), component inventory,
+      and security advisory response (SR-01) under AC-09 and AC-10.
+    human_delivery_and_advisory_hours: 2.0
+    human_review_and_rework_hours: 1.0
+    planned_human_reserve_credits: 300.0
+    planned_agent_and_ci_reserve_credits: 15.0
+    total_s5_reserve_credits: 315.0
+  separate_factory_development_budget:
+    justification: >
+      Factory engineering (multi-repo sandboxing, bounded retry loops, handover schemas,
+      and Factory pytest suite) is accounted separately from customer delivery.
+    s3_s5_factory_development_hours: 4.0
+    planned_factory_development_credits: 400.0
 
 human_effort:
   team_size: 6
   session_01_hours: 30.0
   session_02_implementation_hours: 18.0
   session_02_review_and_correction_hours: 5.75
-  total_hours: 53.75
+  session_03_breakdown:
+    factory_development_hours: 2.0     # 200.0 credits (tracked separately from customer delivery)
+    customer_delivery_hours: 1.0       # 100.0 credits
+    human_review_hours: 0.5            # 50.0 credits
+    rework_hours: 0.25                 # 25.0 credits
+    session_03_total_hours: 3.75       # 375.0 credits (175.0 customer delivery/review/rework + 200.0 Factory dev)
+  total_hours: 57.5
 
 agent_runs:
   session_01:
@@ -171,10 +214,55 @@ agent_runs:
           - "analyze_cost_traces_tool"
         credits: 4.6974
 
+  session_03:
+    project_id: "website-01"
+    customer_task_id: "NW-S3-001"
+    model: "qwen3:4b@359d7dd4bcda"
+    includes_failed_and_discarded_runs: true
+    workflows:
+      - workflow_id: "WF-WEBSITE01-S3-001"
+        status: "rejected_at_human_gate (changes_requested)"
+        note: "Initial run used unapproved openai_compatible provider from local .env; rejected by human reviewer (muhammad) and re-run on local Ollama qwen3:4b."
+        run_ids:
+          - "e6611738-5146-4ed7-9200-7ece09e694db"
+          - "ccf9f03d-50df-4d86-b123-89edbb059279"
+          - "7315b671-9289-4ef3-b9ee-a71d8c954f67"
+        calls: 3
+        duration_seconds: 5.0774
+        recorded_input_tokens: 1748
+        recorded_output_tokens: 571
+        credits: 3.1086
+      - workflow_id: "WF-WEBSITE01-S3-002"
+        status: "approved_at_human_gate"
+        model: "qwen3:4b@359d7dd4bcda"
+        run_ids:
+          - "0f80f57a-ea68-4719-ae6d-597541d8a3d8"
+          - "f94402cb-6d67-44e0-b4e9-410c8188f5b4"
+          - "89972355-4ca8-48fe-8a7d-ae1de042f0a3"
+        calls: 3
+        duration_seconds: 212.4698
+        recorded_input_tokens: 1618
+        recorded_output_tokens: 611
+        tools_used:
+          - "read_product_file_tool"
+          - "write_product_file_tool"
+          - "run_product_test_tool"
+        credits: 5.1814
+
 credits_calculation:
   session_01_total_credits: 166.4369
   session_02_agent_credits: 41.8849
   session_02_human_review_and_correction_credits: 575.0
   session_02_ci_credits: 3.0
   session_02_total_credits: 619.8849
-  notes: "Includes all failed attempts, timeouts, retries, and explicit human review/correction hours tracked in costs/usage.csv and traces under evidence/session-02/."
+  session_03_breakdown:
+    agent_credits_approved_run: 5.1814
+    agent_credits_discarded_run: 3.1086
+    session_03_total_agent_credits: 8.2900
+    human_customer_delivery_credits: 100.0
+    human_review_credits: 50.0
+    human_rework_credits: 25.0
+    session_03_customer_delivery_subtotal_credits: 184.2900  # 175 human delivery/review/rework + 8.29 agent + 1.0 CI (vs 631.0 S3/S4 budget)
+    human_factory_development_credits: 200.0                 # Accounted separately against 400.0 S3-S5 Factory dev budget
+    session_03_ci_credits: 1.0
+    session_03_grand_total_credits: 384.2900

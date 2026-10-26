@@ -1,0 +1,30 @@
+{
+  "task_id": "NW-S3-001",
+  "project_id": "website-01",
+  "workflow_id": "WF-WEBSITE01-S3-002",
+  "decision": "approved",
+  "reviewer": "saad",
+  "decided_at_utc": "2026-10-26T10:33:15.053469+00:00",
+  "tested_source_commit": "5b9aefa412a67cf3350c5aac98c856a099d72bec",
+  "product_input_commit": "15d7ce55ba48effe15904833b0b9df819552a6d5",
+  "reviewed_artifact_hashes": {
+    "site/index.html": "9424b48c5f309148cc95abbf49180d62fa5df290de0f5652d20fb2fb0a1f460b"
+  },
+  "report_path": "C:\\Hochschule\\Module\\Semester 5\\Agentic AI\\agentic_ai_haw_2627\\runs\\website-01\\WF-WEBSITE01-S3-002\\workflow-report.json",
+  "report_sha256": "25d6c20cc7decebd079a21ef1e82fd47a088f2197de7121fd06034433bef201e",
+  "test_evidence_paths": [
+    "C:\\Hochschule\\Module\\Semester 5\\Agentic AI\\agentic_ai_haw_2627\\runs\\website-01\\WF-WEBSITE01-S3-002\\trace.jsonl",
+    "C:\\Hochschule\\Module\\Semester 5\\Agentic AI\\agentic_ai_haw_2627\\runs\\website-01\\WF-WEBSITE01-S3-002\\manifest.json"
+  ],
+  "accepted_criteria": [
+    "AC-01",
+    "AC-02 (N-03)",
+    "AC-04"
+  ],
+  "open_criteria": [
+    "AC-02 (N-04, N-05 due in S4)",
+    "AC-03, AC-05..AC-08 due in S4"
+  ],
+  "rationale": "Human review verified visible content in site/index.html (N-01, N-02, N-03 Wartungsplanung, N-09 course notice) and verified that the 'Anfrage stellen' link targets mailto:kontakt@nordwerk.example. Separate product tests (4/4) and Factory tests passed.",
+  "identity_assurance": "self_declared_course_review"
+}
