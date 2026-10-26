@@ -1,104 +1,42 @@
-# Quality-Agent: lokale Ausführungsevidenz, 19. Oktober 2026
+# Ausführungsevidenz – Termin 2 / Vorbereitung Termin 3 (`mimumisaseya gmbh`)
 
-## Aktueller Nachweis: gemeinsames Task-/State-Modell im Quality-Agenten
+**Stand:** 26. Oktober 2026. Dieses Verzeichnis enthält alle geprüften Ausführungstraces (`.jsonl`), strukturierte Berichte (`.json`), separate menschliche Review-Artefakte (`*.review*.json`), Architektur-/Backend-Artefakte (`.md`) sowie den vollständigen Testnachweis mit laufender PostgreSQL-Datenbank (**0 übersprungene Tests**).
 
-`shared-task-verified-report.json` und `shared-task-verified-trace.jsonl` belegen den
-abschließenden echten Ollama-Lauf mit dem neuen `EngineeringTask`/`QualityTask` und
-`EngineeringState`. Beide internen Prüfschritte verwenden denselben normalisierten Task;
-Task-/Workflow-ID und die gespeicherten Task-Daten stimmen überein. Die LLM-Zusammenfassung
-ist gültig (`summary_status=ok`); 21 Policytests und die ausgewählte Security-Prüfung sind
-erfolgreich. Menschliches Review weiterhin ausstehend.
+---
 
-`shared-task-pytest.xml` und `shared-task-pytest.txt` dokumentieren **74 passed, 1 skipped**
-im vollständigen Standardlauf (rund 13,24 Sekunden). Enthalten sind 15 neue Testfälle für
-Task-Validierung, JSON-Übergabe, kompatible Eingaben, tatsächliche Verwendung desselben
-Task-Objekts, Erfolgs-/Fehlerfälle sowie die Trennung von Task-Metadaten und LLM-Anweisungen.
-Der optionale Datenbanktest bleibt übersprungen.
-
-Python-Quellhash dieses abschließenden Laufs:
-`e98c8217243b9ec7640624ecf8e74976af7b01963b2761bc921cc6d8560ecccd`.
-Die übrigen `shared-task-report`-/`shared-task-final-report`-Dateien sind Zwischenstände.
-
-Auf Wunsch wurde nur der bestehende Quality-Agent vorbereitet. Ein zweiter eigenständiger
-Team-Agent ist noch nicht angebunden; die entsprechende Kursanforderung ist damit noch
-nicht vollständig nachgewiesen. Rollen- und Organisationsdateien bleiben unverändert.
-Details zur Schnittstelle stehen in `docs/TASK_MODEL_DE.md`. Die folgenden Abschnitte
-beziehen sich auf ältere Stände vor dieser Erweiterung.
-
-## Aktueller Nachweis nach Ollama-Korrektur
-
-Die Dateien `ollama-fix-report.json` und `ollama-fix-trace.jsonl` dokumentieren einen
-erfolgreichen echten Modelllauf mit `qwen3:4b`: `summary_status=ok`,
-`llm_response_received=true`, 180 Input- und 44 Output-Tokens. pytest bestand alle
-21 Policytests; der begrenzte Security-Check war erfolgreich. Die menschliche Freigabe
-steht weiterhin aus. Ollama meldete rund 10,03 Sekunden Gesamtzeit, davon rund
-4,60 Sekunden Laden und 3,45 Sekunden Generierung; der QA-Schritt insgesamt dauerte 22,12 Sekunden.
-
-Die LLM-Wartezeit ist jetzt unabhängig vom pytest-Zeitlimit (lokal 180 Sekunden).
-Thinking ist über die API ausgeschaltet und QA fordert kurze JSON-Ausgabe an
-(lokales Ausgabelimit: 384 Tokens). Der Quellhash dieses Laufs lautet
-`39f15ef099e37b760df217e6e89dadb44aeff2c523642dd348a1d55f9372b282`.
-
-`ollama-fix-pytest.xml` und `ollama-fix-pytest.txt` belegen den vollständigen anschließenden
-Regressionstest: **59 passed, 1 skipped**, Laufzeit rund 11,88 Sekunden.
-Neue Fälle prüfen die getrennten Zeitlimits, Thinking-/JSON-Konfiguration und die sichere
-Weitergabe der Laufzeit-Metadaten. Der optionale Datenbanktest bleibt übersprungen.
-
-Die nachfolgenden Abschnitte beschreiben die vorherigen Läufe vor dieser Korrektur.
-
-Diese Nachweise betreffen ausschließlich QA/Security. Rollen- und Organisationsdateien
-wurden nicht geändert. Es wurde keine tatsächliche menschliche Sicherheitsfreigabe erteilt.
-
-## Abschließender Standard-Testlauf
+## 1. Vollständiger Testlauf inkl. echter PostgreSQL-Persistenz (0 Skips)
 
 ```powershell
-Set-Location 'C:\AgenticAi\agentic_ai_haw_2627'
-.\.venv\Scripts\python.exe -m pytest -q --junitxml=evidence/session-02/pytest.xml
+docker compose up -d db --wait
+Get-Content db/init.sql | docker compose exec -T db sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v ON_ERROR_STOP=1'
+$env:STARTER_DATABASE_TEST = "1"
+.\.venv\Scripts\python.exe -m pytest -v --junitxml=evidence/session-02/pytest.xml | Tee-Object -FilePath evidence/session-02/pytest.txt
 ```
 
-- Ergebnis: **55 passed, 1 skipped**; 56 erfasste Fälle, keine Fehler oder Fehlschläge.
-- `pytest.xml`: JUnit-Nachweis; `pytest.txt`: Textausgabe des abschließenden Laufs.
-- Übersprungen: optionaler Starter-PostgreSQL-Test, da `STARTER_DATABASE_TEST` nicht gesetzt war.
-  Docker Desktop war nicht erreichbar. Eine echte PostgreSQL-Persistenzprüfung wurde nicht durchgeführt.
-- Modellantworten in Unit-/Regressionstests sind simuliert. Echte Unterprozessausführung wird
-  unter anderem im bestehenden QA-Integrationstest und im neuen Timeouttest geprüft.
-- Die temporären Review-Entscheidungen der Tests sind Testdaten, keine menschliche Freigabe.
+- **Ergebnis (`pytest.txt`, `pytest.xml`):** **123 passed, 0 skipped, 0 failed**.
+- Sowohl der Starter-Datenbanktest (`tests/starter/test_platform.py::test_database_baseline_supports_committed_persistence`) als auch die eigenen Work-Item-Persistenz- und CRUD-Tests (`tests/test_work_items_api.py::test_work_items_postgresql_persistence` und `test_work_items_crud_lifecycle`) wurden gegen den laufenden PostgreSQL-17/pgvector-Container ausgeführt und verifizieren das tatsächliche Committen über unabhängige Datenbankverbindungen.
 
-## Abschließender echter Quality-Workflow
+---
 
-```powershell
-.\.venv\Scripts\python.exe -m src.agents.quality_agent run --task-file docs/examples/quality-task.json --trace-file evidence/session-02/final-quality-trace.jsonl --report evidence/session-02/final-quality-report.json
-```
+## 2. Frischer End-to-End-Gesamtworkflow (`DRYRUN-WORKITEMS-E2E` / `WF-WORKITEMS-E2E-001`)
 
-- `final-quality-report.json`: strukturierter Abschlussbericht.
-- `final-quality-trace.jsonl`: zwei Ausführungsrecords mit eigener Run-ID und gemeinsamer
-  Task-/Workflow-ID; Security verweist auf den vorausgehenden QA-Run.
-- pytest: **21 passed**, tatsächlicher Exit-Code 0.
-- Security: ausgewählte Datei `src/app/main.py` geprüft, keine Befunde innerhalb des begrenzten Prüfumfangs.
-- Tatsächlich konfigurierter Modellpfad: Ollama / `qwen3:4b`, kein FakeLLM.
-- LLM-Zusammenfassung: **Zeitlimit erreicht**, `summary_status=unavailable`.
-  Damit ist ein echter Aufrufversuch, aber keine erfolgreiche Modellantwort belegt.
-  Es liegen dafür keine Tokenmetadaten vor; sie werden nicht als gemessene Null ausgegeben.
-- Workflow endet mit `awaiting_human_review`, `human_decision=pending`.
-  Der erfolgreiche technische Teststatus bleibt trotz LLM-Timeout erhalten.
+Der frische End-to-End-Durchlauf verbindet alle Stufen vom Task über die Agenten bis zum Artefakt, den PostgreSQL-Tests und den separaten menschlichen Reviews:
 
-HEAD während der Läufe: `be9fe194df18b7e3ddfb46bc67baab644f1eebe6`, Arbeitsbaum geändert.
-Der HEAD-SHA allein ist daher kein Snapshot der Erweiterung. Python-Quellen und Tests des
-abschließenden Laufs sind über `source_sha256` identifiziert:
-`585fe7ee0fe9acaf3b63ece2bb1b0e29cc5a91ebf51988be947245a7e054b276`.
-Die Änderungen sind nicht committet. Nach weiteren Codeänderungen oder einem Abgabe-Commit neu ausführen.
-
-`quality-report.json` und `quality-trace.jsonl` sind ein früherer Zwischenlauf mit 30 Sekunden
-LLM-Wartezeit und einem anderen Quellstand. Sie sind ebenfalls als Timeout dokumentiert und
-werden nicht als Nachweis des abschließenden Quellstands behandelt.
-
-## Grenzen und nächste Schritte
-
-Kein GitHub-Actions-Lauf wurde ausgelöst oder bestätigt. Der CI-Workflow wurde um die
-Speicherung von Testprotokollen ergänzt und lokal als YAML geparst. Ein tatsächlicher CI-Lauf
-ist erst nach Push/PR nachweisbar. Kein vollständiger Secrets-/Historien-/Dependency-Scan,
-kein Deployment und keine Work-Item-API-Persistenzprüfung. Der Security-Check ist heuristisch.
-
-Bericht und Testausgabe durch Sebastian prüfen; erst danach eine explizite Entscheidung über
-die Review-CLI festhalten. Anweisungen stehen in `docs/QUALITY_AGENT_DE.md`.
-Menschliche Implementierungs-/Reviewzeit ist hier nicht geschätzt oder als echte Messung eingetragen.
+1. **Architektur- & Backend-Artefakte (`dev_architect_agent.py` mit lokalem Ollama `qwen3:4b`):**
+   - Trace: `dev-architect-agent-trace.jsonl` (`SESSION-02-ARCH-002` / `run_id=2434605e...` und `SESSION-02-DEV-002` / `run_id=74e3ea19...` sowie vorheriger `needs_review`-Versuch `f32fab88...`).
+   - Erzeugte Artefakte: `arch-work-items.md` (`software_architect`, Minh) und `backend-work-items.md` (`backend_api_engineer`, Mirko).
+   - *Hinweis zu älteren Einträgen:* Die ersten drei Zeilen vom 19.10.2026 (`00bbda85...`, Timeout `424c6466...`, Retry `9dbe63cf...`) entstanden durch eine lokale `.env`-Konfiguration über den `openai_compatible`-Pfad (`gemini-3.5-flash-lite`) nach einem Ollama-Timeout. Nach Umstellung auf `get_chat_model(json_mode=True)` (`reasoning=False`) wurden beide Rollen vollständig kursvorgabenkonform mit lokalem Ollama `qwen3:4b` ausgeführt. Die älteren Zeilen bleiben für die lückenlose Kosten- und Fehlversuchstransparenz erhalten.
+2. **Platform $\rightarrow$ QA Handover-Workflow (`platform_agent.py` $\rightarrow$ `HandoverPayload` $\rightarrow$ `qa_test_agent.py`):**
+   - Trace: `platform-agent-trace.jsonl` (`workflow_id=WF-WORKITEMS-E2E-001`, `task_id=DRYRUN-WORKITEMS-E2E`, Runs `e4da7b40...` und `20536e6a...`, sowie vorangehender abgelehnter Fehlversuch `cbfb8627...`).
+   - Bericht: `platform-qa-workflow-report.json` — endet zwingend im Zustand `human_gate_status: "pending_approval"` und `approved_by_human: null` (`human_approval_required: true`).
+   - **Separates menschliches Review:** `platform-qa-workflow-report.review.json` (erstellt über `record_platform_human_review()` durch `saad` mit kryptografischer `report_sha256`-Bindung; der ursprüngliche Bericht bleibt unverändert auf `pending_approval`).
+3. **Quality- & deterministischer Security-Workflow (`quality_agent.py` = `qa-test-agent` + `security-agent`):**
+   - Trace: `work-items-quality-trace.jsonl` (`workflow_id=WF-WORKITEMS-E2E-001`, `task_id=DRYRUN-WORKITEMS-E2E`, QA-Run `c2b469b9...` + deterministischer Python-AST-Security-Check `8ca1c3c6...` auf `src/app/main.py`, `src/app/db.py` und `src/agents/platform_agent.py`).
+   - Bericht: `work-items-quality-report.json` (`status: "awaiting_human_review"`, `human_decision: "pending"`).
+   - **Separates menschliches Review:** `work-items-quality-report.review-58a2e48910a64b69b9619d0b45ddf10d.json` (erstellt durch `felix` über `quality_agent.record_human_review()`).
+4. **Operations & Observability (`ops_agent.py` mit lokalem Ollama `qwen3:4b`):**
+   - Trace: `ops-agent-trace.jsonl` (echte `qwen3:4b`-Läufe für `devops_engineer` mit `docker compose config --quiet` und `cost_observability_engineer` für `DRYRUN-WORKITEMS-E2E`).
+   - Berichte & separate menschliche Reviews (`mirko`): unter `ops-reports/` (`<run_id>.json` und `<run_id>.review.json`).
+5. **Data & RAG (`data_agent.py` mit lokalem Ollama `qwen3:4b`):**
+   - Erfolgreiche Traces: `6d82cfcb-503e-40fd-b0cd-22ff54e6e71a.jsonl`, `ca2b4646-28e0-4880-884a-d2835afb3366.jsonl` (Ergebnis in `ca2b4646-28e0-4880-884a-d2835afb3366-result.json`).
+   - Vorangegangene Timeout-/Truncate-Fehlversuche (ebenfalls in `costs/usage.csv` abgerechnet): `61fbd66b-b9fc-4590-baba-ac038e9a2d69.jsonl`, `353424f6-393e-426e-a839-562241dece0f.jsonl`, `13dba66d-323c-4541-8c14-39beb9d6da3d.jsonl`.

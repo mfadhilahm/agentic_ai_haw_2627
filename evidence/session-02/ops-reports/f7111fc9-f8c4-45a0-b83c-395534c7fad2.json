@@ -1,0 +1,77 @@
+{
+  "run_id": "f7111fc9-f8c4-45a0-b83c-395534c7fad2",
+  "workflow_id": "WF-WORKITEMS-E2E-001",
+  "task_id": "SESSION-02-OPS-COST",
+  "role_id": "cost_observability_engineer",
+  "agent": "ops-agent",
+  "capability": "observability",
+  "status": "needs_review",
+  "summary": "Trace usage and available human/CI cost records evaluated; verify data coverage.",
+  "findings": [],
+  "recommendations": [
+    "LLM advice was invalid; human review required."
+  ],
+  "devops": null,
+  "observability": {
+    "observed_task_id": "DRYRUN-WORKITEMS-E2E",
+    "trace_files": 1,
+    "agent_runs": 3,
+    "status_counts": {
+      "passed": 2,
+      "failed": 1
+    },
+    "llm_calls": 3,
+    "duration_seconds": 40.1723,
+    "input_tokens": 1357,
+    "output_tokens": 489,
+    "recorded_input_tokens": 1357,
+    "recorded_output_tokens": 489,
+    "runs_missing_token_counts": 0,
+    "runs_with_assumed_calls": 0,
+    "duplicate_records": 0,
+    "agent_credits": 3.4484,
+    "human_hours": 0.75,
+    "human_review_hours": 0.75,
+    "human_credits": 75.0,
+    "ci_credits": 1.0,
+    "total_credits": 79.4484,
+    "breakdown": [
+      {
+        "agent": "platform-agent",
+        "models": [
+          "qwen3:4b"
+        ],
+        "providers": [
+          "ollama"
+        ],
+        "status_counts": {
+          "failed": 1,
+          "passed": 1
+        },
+        "runs": 2,
+        "llm_calls": 2,
+        "duration_seconds": 25.4039,
+        "credits": 2.2944
+      },
+      {
+        "agent": "qa-test-agent",
+        "models": [
+          "qwen3:4b"
+        ],
+        "providers": [
+          "ollama"
+        ],
+        "status_counts": {
+          "passed": 1
+        },
+        "runs": 1,
+        "llm_calls": 1,
+        "duration_seconds": 14.7684,
+        "credits": 1.154
+      }
+    ]
+  },
+  "human_approval_required": true,
+  "approval_decision": "pending",
+  "llm_status": "failed"
+}

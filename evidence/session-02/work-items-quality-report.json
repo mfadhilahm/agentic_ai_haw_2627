@@ -1,0 +1,56 @@
+{
+  "task": {
+    "task_id": "DRYRUN-WORKITEMS-E2E",
+    "task_type": "quality_review",
+    "description": "Run Work-Items PostgreSQL tests and deterministic AST security check on API and platform agent.",
+    "assigned_role": "quality",
+    "input_files": [
+      "src/app/main.py",
+      "src/app/db.py",
+      "src/agents/platform_agent.py"
+    ],
+    "workflow_id": "WF-WORKITEMS-E2E-001",
+    "pytest_target": "tests/test_work_items_api.py",
+    "timeout_seconds": 120
+  },
+  "qa": {
+    "status": "passed",
+    "summary": "All tests passed successfully in 1.27s",
+    "pytest_exit_code": 0,
+    "findings": [],
+    "human_approval_required": true,
+    "summary_status": "ok",
+    "run_id": "24fde0e2-e1a7-4947-a64b-55ef19dc52ae",
+    "trace_path": "evidence\\session-02\\work-items-quality-trace.jsonl",
+    "tool_status": "completed"
+  },
+  "security": {
+    "status": "passed",
+    "checks": [
+      "artifact_path_boundary",
+      "dynamic_code_execution",
+      "shell_execution",
+      "literal_credentials",
+      "human_approval_policy",
+      "technical_status_integrity"
+    ],
+    "findings": [],
+    "artifact_sha256": {
+      "src/app/main.py": "b809ff8899a753ba9addace599e2e53f83d4db5728f8c286258a1a0616ae8703",
+      "src/app/db.py": "958e91255a95af8ec5bdc10f66c9ff5a09a1c36bd298fae7ba888e63acadb8d0",
+      "src/agents/platform_agent.py": "810e63325b99539fb4e65b8ac523e2c467d666fb584e06a9538eed5d36e0f7cd"
+    },
+    "human_approval_required": true,
+    "run_id": "d0b08be4-6fe7-4cfb-820f-df2c9a6c56d1",
+    "trace_path": "evidence\\session-02\\work-items-quality-trace.jsonl"
+  },
+  "status": "awaiting_human_review",
+  "human_approval_required": true,
+  "human_decision": "pending",
+  "created_at": "2026-10-26T08:30:28.056603+00:00",
+  "source_version": {
+    "commit_sha": "cbdff07696797c054ff714fbf8aa782128507d97",
+    "working_tree_dirty": true,
+    "source_sha256": "3d9575265268f860528c754691fc1fa4038aeee8f984132427330aa10c2dcdd5"
+  }
+}

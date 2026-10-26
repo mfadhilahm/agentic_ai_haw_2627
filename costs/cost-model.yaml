@@ -12,17 +12,17 @@ agent:
 
 ci:
   run_credits: 1.0
-  runs: 4
+  runs: 3
 
 session: 2
-date: 2026-10-19
+date: 2026-10-26
 
 human_effort:
   team_size: 6
   session_01_hours: 30.0
   session_02_implementation_hours: 18.0
-  session_02_review_hours: 3.0
-  total_hours: 51.0
+  session_02_review_and_correction_hours: 5.75
+  total_hours: 53.75
 
 agent_runs:
   session_01:
@@ -42,42 +42,139 @@ agent_runs:
 
   session_02:
     model: "qwen3:4b"
+    includes_failed_attempts_and_retries: true
     tasks:
       - task_id: "SESSION-02-PLAT-AE"
         agent_name: "platform-agent"
         role: "agent_engineer"
-        runs: 1
-        calls: 1
-        duration_seconds: 20.2603
-        input_tokens: 573
-        output_tokens: 768
+        runs: 2
+        failed_or_fallback_runs: 1
+        passed_runs: 1
+        calls: 2
+        duration_seconds: 31.2202
+        recorded_input_tokens: 573
+        recorded_output_tokens: 768
         tools_used:
           - "inspect_agent_architecture_tool"
-        credits: 1.2448
-      - task_id: "DRYRUN-WORKITEMS-IE"
+        credits: 2.3544
+      - task_id: "SESSION-02-PLAT-IE"
         agent_name: "platform-agent"
         role: "integration_engineer"
         runs: 1
+        failed_or_fallback_runs: 1
+        passed_runs: 0
         calls: 1
-        duration_seconds: 20.4326
-        input_tokens: 418
-        output_tokens: 768
+        duration_seconds: 10.8358
         tools_used:
           - "inspect_integration_contracts_tool"
-        credits: 1.2434
+        credits: 1.1084
+      - task_id: "DRYRUN-WORKITEMS-IE"
+        agent_name: "platform-agent"
+        role: "integration_engineer"
+        runs: 3
+        failed_or_fallback_runs: 1
+        passed_runs: 2
+        calls: 3
+        duration_seconds: 49.1040
+        recorded_input_tokens: 838
+        recorded_output_tokens: 1536
+        tools_used:
+          - "inspect_integration_contracts_tool"
+        credits: 3.5692
       - task_id: "SESSION-02-QUALITY"
-        agent_name: "qa-test-agent + security-agent"
+        agent_name: "qa-test-agent + quality-security-checker (deterministic AST)"
         role: "qa_test_engineer / ai_safety_security_engineer"
-        runs: 2
-        calls: 1
-        duration_seconds: 21.8
+        runs: 12
+        failed_or_timeout_runs: 2
+        passed_runs: 10
+        calls: 6
+        duration_seconds: 167.29
+        recorded_input_tokens: 860
+        recorded_output_tokens: 185
         tools_used:
           - "run_pytest_tool"
           - "inspect_python"
-        credits: 1.2500
+        credits: 7.6978
+      - task_id: "SESSION-02-ARCH-001 / SESSION-02-DEV-001 (historical)"
+        agent_name: "sa-agent / bae-agent"
+        role: "software_architect / backend_api_engineer"
+        model_note: "Initial local .env openai_compatible test (gemini-3.5-flash-lite) including 1 60.2s timeout and 1 retry; replaced by course-compliant qwen3:4b runs below."
+        runs: 3
+        failed_or_timeout_runs: 1
+        passed_runs: 2
+        calls: 3
+        duration_seconds: 71.7128
+        recorded_input_tokens: 1315
+        recorded_output_tokens: 3330
+        tools_used:
+          - "read_repo_file_tool"
+          - "write_repo_file_tool"
+        credits: 3.8766
+      - task_id: "SESSION-02-ARCH-002 / SESSION-02-DEV-002"
+        agent_name: "dev_architect_agent"
+        role: "software_architect / backend_api_engineer"
+        model: "qwen3:4b"
+        runs: 3
+        failed_or_fallback_runs: 1
+        passed_runs: 2
+        calls: 3
+        duration_seconds: 29.9459
+        recorded_input_tokens: 6278
+        recorded_output_tokens: 566
+        tools_used:
+          - "read_repo_file_tool"
+          - "write_repo_file_tool"
+        credits: 3.4477
+      - task_id: "data-summary-session02"
+        agent_name: "data-agent"
+        role: "data_rag_engineer"
+        model: "qwen3:4b"
+        runs: 5
+        failed_or_timeout_runs: 3
+        passed_runs: 2
+        calls: 5
+        duration_seconds: 547.3280
+        recorded_input_tokens: 1174
+        recorded_output_tokens: 934
+        tools_used:
+          - "read_project_document"
+        credits: 10.5341
+      - task_id: "DRYRUN-WORKITEMS-E2E"
+        agent_name: "platform-agent + qa-test-agent + quality-security-checker"
+        role: "integration_engineer / qa_test_engineer / ai_safety_security_engineer"
+        workflow_id: "WF-WORKITEMS-E2E-001"
+        runs: 5
+        failed_or_fallback_runs: 1
+        passed_runs: 4
+        calls: 4
+        duration_seconds: 54.6344
+        recorded_input_tokens: 1586
+        recorded_output_tokens: 532
+        tools_used:
+          - "inspect_integration_contracts_tool"
+          - "run_pytest_tool"
+          - "inspect_python"
+        credits: 4.5993
+      - task_id: "SESSION-02-OPS-DEVOPS / SESSION-02-OPS-COST"
+        agent_name: "ops-agent"
+        role: "devops_engineer / cost_observability_engineer"
+        model: "qwen3:4b"
+        runs: 4
+        failed_or_fallback_runs: 3
+        passed_runs: 1
+        calls: 4
+        duration_seconds: 60.2976
+        recorded_input_tokens: 1756
+        recorded_output_tokens: 1482
+        tools_used:
+          - "inspect_devops_tool"
+          - "analyze_cost_traces_tool"
+        credits: 4.6974
 
 credits_calculation:
-  session_01_total_credits: 19.44
-  session_02_agent_credits: 3.7382
-  session_02_human_review_credits: 300.0
-  notes: "Actual per-task usage rows are tracked in costs/usage.csv and traces under evidence/session-02/."
+  session_01_total_credits: 166.4369
+  session_02_agent_credits: 41.8849
+  session_02_human_review_and_correction_credits: 575.0
+  session_02_ci_credits: 3.0
+  session_02_total_credits: 619.8849
+  notes: "Includes all failed attempts, timeouts, retries, and explicit human review/correction hours tracked in costs/usage.csv and traces under evidence/session-02/."

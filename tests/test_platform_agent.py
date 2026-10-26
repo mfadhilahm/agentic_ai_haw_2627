@@ -1,10 +1,14 @@
 import json
 
+import pytest
 from langchain_core.messages import AIMessage
+from pydantic import ValidationError
 
 from src.agents.platform_agent import (
+    PlatformAgentResult,
     PlatformTask,
     inspect_agent_architecture_tool,
+    record_platform_human_review,
     run_platform_agent,
     run_platform_to_qa_workflow,
 )
@@ -23,6 +27,22 @@ class FakePlatformLLM:
                     "findings": [],
                     "human_gate_status": "pending_approval",
                     "human_approval_required": True,
+                }
+            )
+        )
+
+
+class SelfApprovingPlatformLLM:
+    def invoke(self, messages):
+        return AIMessage(
+            content=json.dumps(
+                {
+                    "status": "passed",
+                    "role_executed": "agent_engineer",
+                    "summary": "LLM attempting to bypass human gate.",
+                    "findings": [],
+                    "human_gate_status": "approved",
+                    "human_approval_required": False,
                 }
             )
         )
@@ -113,8 +133,41 @@ def test_platform_agent_handles_missing_file_error(tmp_path) -> None:
     assert result.human_gate_status == "escalate_to_human"
 
 
-def test_platform_to_qa_handover_workflow(tmp_path) -> None:
+def test_llm_cannot_override_human_approval_or_self_approve(tmp_path) -> None:
+    trace_file = tmp_path / "platform-self-approve-trace.jsonl"
+    result = run_platform_agent(
+        PlatformTask(
+            task_id="TEST-PLAT-GATE-01",
+            assigned_role="agent_engineer",
+            input_files=["src/agents/qa_test_agent.py"],
+        ),
+        llm=SelfApprovingPlatformLLM(),
+        trace_file=str(trace_file),
+    )
+    assert result.status == "passed"
+    assert result.human_approval_required is True
+    assert result.human_gate_status == "pending_approval"
+
+    with pytest.raises(ValidationError):
+        PlatformAgentResult(
+            status="passed",
+            role_executed="agent_engineer",
+            summary="Attempted bypass",
+            human_approval_required=False,  # type: ignore[arg-type]
+        )
+
+    with pytest.raises(ValidationError):
+        PlatformAgentResult(
+            status="passed",
+            role_executed="agent_engineer",
+            summary="Attempted self-approval",
+            human_gate_status="approved",  # type: ignore[arg-type]
+        )
+
+
+def test_platform_to_qa_handover_workflow_and_separate_human_review(tmp_path) -> None:
     trace_file = tmp_path / "workflow-trace.jsonl"
+    report_path = tmp_path / "platform-qa-report.json"
     wf_result = run_platform_to_qa_workflow(
         PlatformTask(
             task_id="TEST-WF-001",
@@ -126,15 +179,34 @@ def test_platform_to_qa_handover_workflow(tmp_path) -> None:
         ),
         platform_llm=FakePlatformLLM(),
         qa_llm=FakeQALLM(),
-        human_decision="approved",
-        approved_by_human="muhammad",
         trace_file=str(trace_file),
+        report_path=str(report_path),
     )
     assert wf_result.platform_result.status == "passed"
     assert wf_result.qa_result is not None
     assert wf_result.qa_result.status == "passed"
-    assert wf_result.human_gate_status == "approved"
-    assert wf_result.approved_by_human == "muhammad"
+    assert wf_result.human_approval_required is True
+    assert wf_result.human_gate_status == "pending_approval"
+    assert wf_result.approved_by_human is None
+    assert report_path.exists()
+
+    review_path = record_platform_human_review(
+        report_path,
+        reviewer="muhammad",
+        decision="approved",
+        notes="Reviewed integration contract and QA test execution.",
+    )
+    assert review_path.exists()
+    review_data = json.loads(review_path.read_text(encoding="utf-8"))
+    assert review_data["task_id"] == "TEST-WF-001"
+    assert review_data["workflow_id"] == "WF-HANDOVER-001"
+    assert review_data["decision"] == "approved"
+    assert review_data["reviewer"] == "muhammad"
+    assert len(review_data["report_sha256"]) == 64
+    # Ensure original workflow report remains immutable in pending_approval
+    saved_report = json.loads(report_path.read_text(encoding="utf-8"))
+    assert saved_report["human_gate_status"] == "pending_approval"
+    assert saved_report["approved_by_human"] is None
 
 
 def test_shared_engineering_task_used_by_platform_and_quality_agents(tmp_path) -> None:
@@ -169,8 +241,9 @@ def test_shared_engineering_task_used_by_platform_and_quality_agents(tmp_path) -
     assert {t["task_id"] for t in traces} == {"SHARED-TASK-001"}
 
 
-def test_platform_to_qa_workflow_error_short_circuits_and_escalates(tmp_path) -> None:
+def test_platform_to_qa_workflow_error_short_circuits_and_cannot_be_approved(tmp_path) -> None:
     trace_file = tmp_path / "workflow-error-trace.jsonl"
+    report_path = tmp_path / "workflow-error-report.json"
     wf_result = run_platform_to_qa_workflow(
         PlatformTask(
             task_id="TEST-WF-ERR-001",
@@ -182,11 +255,25 @@ def test_platform_to_qa_workflow_error_short_circuits_and_escalates(tmp_path) ->
         ),
         platform_llm=FakePlatformLLM(),
         qa_llm=FakeQALLM(),
-        human_decision="approved",
-        approved_by_human="saad",
         trace_file=str(trace_file),
+        report_path=str(report_path),
     )
     assert wf_result.platform_result.status == "error"
     assert wf_result.qa_result is None
     assert wf_result.human_gate_status == "escalate_to_human"
+    assert wf_result.approved_by_human is None
 
+    with pytest.raises(ValueError, match="pending_approval"):
+        record_platform_human_review(
+            report_path,
+            reviewer="saad",
+            decision="approved",
+        )
+
+    escalation_review = record_platform_human_review(
+        report_path,
+        reviewer="saad",
+        decision="changes_requested",
+        notes="Missing endpoint file must be fixed before approval.",
+    )
+    assert escalation_review.exists()

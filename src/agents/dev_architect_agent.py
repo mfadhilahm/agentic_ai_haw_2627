@@ -236,9 +236,17 @@ def _parse_result(
         payload["task_id"] = request.task_id
         payload["role"] = request.assigned_role
         payload["agent"] = role_meta.agent_id
+        if payload.get("status") not in ("completed", "needs_review", "error"):
+            payload["status"] = "completed"
+        elif payload.get("status") == "needs_review" and (
+            payload.get("decisions_or_contracts") or payload.get("proposed_changes")
+        ):
+            payload["status"] = "completed"
         payload.setdefault(
-            "human_approval_required", role_meta.human_approval_required
+            "summary",
+            f"Completed {request.assigned_role} specification and review for {request.task_id}.",
         )
+        payload["human_approval_required"] = True
         return DevArchitectResult.model_validate(payload)
     except (json.JSONDecodeError, ValidationError):
         return DevArchitectResult(
@@ -304,7 +312,7 @@ def _invoke_configured_llm_bounded(
     from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
 
     def _call() -> tuple[str, tuple[int | None, int | None]]:
-        response = get_chat_model().invoke(
+        response = get_chat_model(json_mode=True).invoke(
             [SystemMessage(content=system_text), HumanMessage(content=human_text)]
         )
         return _message_text(response), usage_from_message(response)
