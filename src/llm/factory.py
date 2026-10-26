@@ -29,7 +29,7 @@ def get_chat_model(
             temperature=settings.llm_temperature,
             client_kwargs={"timeout": settings.llm_timeout_seconds},
             num_predict=settings.llm_max_output_tokens,
-            reasoning=effective_reasoning,
+            reasoning=False if json_mode and reasoning is None else reasoning,
             format="json" if json_mode else None,
         )
 
