@@ -51,7 +51,7 @@ def db_health() -> dict:
         return database_health()
     except Exception as exc:  # endpoint should report failure without crashing app
         raise HTTPException(
-            status_code=503, detail=f"database unavailable: {exc}"
+            status_code=503, detail="database unavailable"
         ) from exc
 
 
@@ -70,7 +70,7 @@ def api_create_work_item(payload: WorkItemCreate) -> WorkItemOut:
         return WorkItemOut.model_validate(row)
     except Exception as exc:
         raise HTTPException(
-            status_code=503, detail=f"database unavailable: {exc}"
+            status_code=503, detail="database unavailable"
         ) from exc
 
 
@@ -85,7 +85,7 @@ def api_list_work_items(
         return [WorkItemOut.model_validate(r) for r in rows]
     except Exception as exc:
         raise HTTPException(
-            status_code=503, detail=f"database unavailable: {exc}"
+            status_code=503, detail="database unavailable"
         ) from exc
 
 
@@ -95,7 +95,7 @@ def api_complete_work_item(item_id: int) -> WorkItemOut:
         row = complete_work_item(item_id)
     except Exception as exc:
         raise HTTPException(
-            status_code=503, detail=f"database unavailable: {exc}"
+            status_code=503, detail="database unavailable"
         ) from exc
     if row is None:
         raise HTTPException(status_code=404, detail="work item not found")
@@ -110,7 +110,7 @@ def api_delete_work_item(item_id: int) -> Response:
         deleted = delete_work_item(item_id)
     except Exception as exc:
         raise HTTPException(
-            status_code=503, detail=f"database unavailable: {exc}"
+            status_code=503, detail="database unavailable"
         ) from exc
     if not deleted:
         raise HTTPException(status_code=404, detail="work item not found")
