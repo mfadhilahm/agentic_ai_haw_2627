@@ -52,7 +52,11 @@ def _create_temp_product_checkout(tmp_path: Path) -> Path:
     real_product_test = (
         REPO_ROOT.parent / "client-01-website" / "tests" / "test_website_s3.py"
     )
-    if real_product_test.is_file():
+    try:
+        has_real_test = real_product_test.is_file()
+    except OSError:
+        has_real_test = False
+    if has_real_test:
         shutil.copyfile(
             real_product_test, product_dir / "tests" / "test_website_s3.py"
         )

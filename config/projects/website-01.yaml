@@ -15,7 +15,7 @@ allowed_write_prefixes:
 
 # Input files in the product checkout inspected by the Factory
 product_input_files:
-  - "docs/issue-01-session-03.md"
+  - "docs/issue-02-session-04.md"
   - "site/index.html"
   - "site/styles.css"
 
@@ -23,7 +23,7 @@ product_input_files:
 target_product_file: "site/index.html"
 
 # Separate automated product check executed in the product checkout (B6)
-product_test_target: "tests/test_website_s3.py"
+product_test_target: "tests/test_website_s4.py"
 product_test_command: "python -m unittest discover -s tests -p \"test_*.py\" -v"
 product_start_command: "python -m http.server 8080 --directory site"
 
@@ -72,6 +72,7 @@ required_content:
 r01_reference_task:
   task_id: "R-01"
   description: "Ergänze unter den Leistungen die Karte „Projektkoordination“ mit dem Text „Wir koordinieren klar abgegrenzte technische Vorhaben mit Ihrem Team.“ Alle bisherigen Inhalte, Kontaktziele und Navigation müssen erhalten bleiben."
+  product_test_target: "tests/verify_r01_baseline.py"
   additional_required_content:
     R-01_title: "Projektkoordination"
     R-01_text: "Wir koordinieren klar abgegrenzte technische Vorhaben mit Ihrem Team."
