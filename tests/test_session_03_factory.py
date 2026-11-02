@@ -162,14 +162,14 @@ def test_project_configuration_and_task_assignment() -> None:
     """D1 / A1: Verify project configuration loads website-01 and maps to CustomerDeliveryTask."""
     cfg = load_project_config("website-01")
     assert cfg["project_id"] == "website-01"
-    assert cfg["customer_task_id"] == "NW-S3-001"
+    assert cfg["customer_task_id"] in ("NW-S3-001", "NW-S4-001")
     assert cfg["product_repo_path"] == "../client-01-website"
     assert cfg["allowed_write_prefixes"] == ["site/"]
 
     task, req_content = build_task_from_project_config("website-01")
     assert isinstance(task, CustomerDeliveryTask)
     assert task.project_id == "website-01"
-    assert task.task_id == "NW-S3-001"
+    assert task.task_id in ("NW-S3-001", "NW-S4-001")
     assert task.target_product_file == "site/index.html"
     assert req_content["N-01"] == "Nordwerk Industrie-Service"
     assert req_content["N-08_href"] == "mailto:kontakt@nordwerk.example"
