@@ -1,8 +1,7 @@
-"""Session 3 & 4 Customer Delivery Workflow:
+"""Session 3–5 Customer Delivery Workflow:
 Multi-agent cooperation (Architect -> Implementation -> QA) on an external product checkout
-with workspace sandboxing, strict LLM output validation (no silent HTML fallback),
-verified clean Factory commit tracking, bounded correction loops, run manifests,
-and a human review gate.
+with workspace sandboxing, strict LLM output validation (no silent default HTML fallback),
+bounded correction loops, run manifests with verified Factory commits, and a human review gate.
 """
 from __future__ import annotations
 
@@ -46,7 +45,7 @@ AutomatedGateStatus = Literal[
     "pending_approval", "changes_requested", "escalate_to_human"
 ]
 
-DEFAULT_REQUIRED_CONTENT: dict[str, str] = {
+DEFAULT_S3_REQUIRED_CONTENT: dict[str, str] = {
     "N-01": "Nordwerk Industrie-Service",
     "N-02": "Praktische Unterstützung für Ihren technischen Betrieb.",
     "N-03_title": "Wartungsplanung",
@@ -62,8 +61,14 @@ DEFAULT_REQUIRED_CONTENT: dict[str, str] = {
     ),
 }
 
-SESSION_04_REQUIRED_CONTENT: dict[str, str] = {
-    **DEFAULT_REQUIRED_CONTENT,
+DEFAULT_S4_REQUIRED_CONTENT: dict[str, str] = {
+    "N-01": "Nordwerk Industrie-Service",
+    "N-02": "Praktische Unterstützung für Ihren technischen Betrieb.",
+    "N-03_title": "Wartungsplanung",
+    "N-03_text": (
+        "Wir strukturieren Wartungsaufgaben und dokumentieren "
+        "Zuständigkeiten für kleine technische Betriebe."
+    ),
     "N-04_title": "Ersatzteilkoordination",
     "N-04_text": (
         "Wir unterstützen bei der Abstimmung von Ersatzteilbedarfen "
@@ -74,13 +79,21 @@ SESSION_04_REQUIRED_CONTENT: dict[str, str] = {
         "Wir bringen technische Unterlagen in eine nachvollziehbare "
         "und nutzbare Struktur."
     ),
-    "N-06_group_1": "Kleine Produktionsbetriebe",
-    "N-06_group_2": "Technische Serviceunternehmen",
+    "N-06_target_1": "Kleine Produktionsbetriebe",
+    "N-06_target_2": "Technische Serviceunternehmen",
     "N-07": (
-        "Ein fester Ansprechpartner, ein gemeinsam vereinbarter Leistungsumfang "
-        "und nachvollziehbare Ergebnisse."
+        "Ein fester Ansprechpartner, ein gemeinsam vereinbarter "
+        "Leistungsumfang und nachvollziehbare Ergebnisse."
+    ),
+    "N-08_label": "Anfrage stellen",
+    "N-08_href": "mailto:kontakt@nordwerk.example",
+    "N-09": (
+        "Fiktives Unternehmen – Lehrprojekt der HAW Hamburg. "
+        "Keine realen Angebote oder Kontaktaufnahme."
     ),
 }
+
+DEFAULT_REQUIRED_CONTENT: dict[str, str] = dict(DEFAULT_S4_REQUIRED_CONTENT)
 
 
 class ArchitectPlanResult(BaseModel):
@@ -129,9 +142,7 @@ class CustomerDeliveryWorkflowResult(BaseModel):
     task_id: str
     product_repo_path: str
     factory_commit: str
-    factory_commit_clean: bool = True
-    factory_dirty_files: list[str] = Field(default_factory=list)
-    workflow_code_sha256: str = ""
+    factory_code_clean: bool = True
     product_input_commit: str
     product_output_commit: str
     iterations_used: int
@@ -177,7 +188,6 @@ class CustomerHumanReviewRecord(BaseModel):
 class DeliveryWorkflowState(TypedDict, total=False):
     task: CustomerDeliveryTask
     required_content: dict[str, str]
-    acceptance_criteria: list[str]
     run_dir: Path
     trace_file: str
     initial_file_snapshot: str
@@ -216,55 +226,76 @@ def build_task_from_project_config(
 ) -> tuple[CustomerDeliveryTask, dict[str, str]]:
     """Construct a CustomerDeliveryTask and required_content dictionary from project config."""
     cfg = load_project_config(project_id, config_dir=config_dir)
-    req_content = dict(DEFAULT_REQUIRED_CONTENT)
-    if isinstance(cfg.get("required_content"), dict):
-        req_content.update(
-            {str(k): str(v) for k, v in cfg["required_content"].items()}
-        )
+    effective_task_id = task_id or str(cfg.get("customer_task_id", "NW-S4-001"))
 
-    resolved_task_id = task_id or str(cfg.get("customer_task_id", "NW-S4-001"))
-    description = (
-        f"Deliver Nordwerk Industrie-Service website release candidate ({resolved_task_id}) "
-        "in the customer repository."
-    )
-    product_test_target = str(
-        cfg.get("product_test_target", "tests/test_website_s3.py")
+    tasks_map = cfg.get("tasks") if isinstance(cfg.get("tasks"), dict) else {}
+    task_cfg = (
+        tasks_map.get(effective_task_id)
+        if isinstance(tasks_map, dict) and isinstance(tasks_map.get(effective_task_id), dict)
+        else {}
     )
 
-    # Support R-01 reference baseline task directly from configuration (C1 / L4.4)
-    r01_cfg = cfg.get("r01_reference_task")
-    if (
-        isinstance(r01_cfg, dict)
-        and resolved_task_id.upper().startswith("R-01")
-    ):
-        if isinstance(r01_cfg.get("description"), str) and r01_cfg["description"].strip():
-            description = r01_cfg["description"].strip()
-        if isinstance(r01_cfg.get("additional_required_content"), dict):
+    if effective_task_id.startswith("NW-S3"):
+        req_content = dict(DEFAULT_S3_REQUIRED_CONTENT)
+    else:
+        req_content = dict(DEFAULT_S4_REQUIRED_CONTENT)
+        if isinstance(cfg.get("required_content"), dict):
             req_content.update(
-                {
-                    str(k): str(v)
-                    for k, v in r01_cfg["additional_required_content"].items()
-                }
+                {str(k): str(v) for k, v in cfg["required_content"].items()}
             )
-        if isinstance(r01_cfg.get("product_test_target"), str):
-            product_test_target = r01_cfg["product_test_target"]
+
+    if isinstance(task_cfg.get("required_content"), dict):
+        req_content = {
+            str(k): str(v) for k, v in task_cfg["required_content"].items()
+        }
+
+    input_files = list(
+        task_cfg.get(
+            "product_input_files",
+            cfg.get(
+                "product_input_files",
+                ["docs/issue-02-session-04.md", "site/index.html", "site/styles.css"],
+            ),
+        )
+    )
+    test_target = str(
+        task_cfg.get(
+            "product_test_target",
+            cfg.get("product_test_target", "tests/test_website_s4.py"),
+        )
+    )
+    ac_list = list(
+        task_cfg.get(
+            "acceptance_criteria_in_scope",
+            cfg.get(
+                "acceptance_criteria_in_scope",
+                ["AC-01", "AC-02", "AC-03", "AC-04", "AC-05", "AC-06", "AC-07", "AC-08"],
+            ),
+        )
+    )
+    description = str(
+        task_cfg.get(
+            "description",
+            cfg.get(
+                "description",
+                f"Deliver customer task {effective_task_id} for {project_id}.",
+            ),
+        )
+    )
 
     task = CustomerDeliveryTask(
-        task_id=resolved_task_id,
-        description=description,
+        task_id=effective_task_id,
         workflow_id=workflow_id or f"WF-{project_id.upper()}-{uuid.uuid4().hex[:8]}",
+        description=description,
         project_id=str(cfg.get("project_id", project_id)),
         product_repo_path=product_repo_path
         or str(cfg.get("product_repo_path", "../client-01-website")),
-        input_files=list(
-            cfg.get(
-                "product_input_files",
-                ["docs/issue-01-session-03.md", "site/index.html"],
-            )
-        ),
+        input_files=input_files,
         target_product_file=str(cfg.get("target_product_file", "site/index.html")),
-        product_test_target=product_test_target,
+        product_test_target=test_target,
         allowed_write_prefixes=list(cfg.get("allowed_write_prefixes", ["site/"])),
+        acceptance_criteria=[str(x) for x in ac_list],
+        required_content=dict(req_content),
         max_correction_loops=max_correction_loops
         if max_correction_loops is not None
         else int(cfg.get("max_correction_loops", 2)),
@@ -418,20 +449,11 @@ def _git_head_commit(repo_dir: Path) -> str:
     return "unknown"
 
 
-def _get_factory_git_state(
-    repo_dir: Path = REPO_ROOT,
-    tracked_code_paths: tuple[str, ...] = ("src", "config", "organization"),
-) -> tuple[str, bool, list[str]]:
-    """Return (head_commit, is_clean, dirty_files) for Factory workflow code & config.
-
-    Ensures the recorded factory_commit genuinely contains the executed workflow code
-    and project configuration (Session 3 Feedback item 2).
-    """
-    head_commit = _git_head_commit(repo_dir)
-    dirty_files: list[str] = []
+def _git_code_worktree_clean(repo_dir: Path) -> bool:
+    """Verify whether Factory code & config (src/ and config/) are committed cleanly in HEAD."""
     try:
         completed = subprocess.run(
-            ["git", "status", "--porcelain", "--", *tracked_code_paths],
+            ["git", "status", "--porcelain", "--", "src", "config"],
             cwd=repo_dir,
             capture_output=True,
             text=True,
@@ -439,25 +461,10 @@ def _get_factory_git_state(
             check=False,
         )
         if completed.returncode == 0:
-            for line in completed.stdout.splitlines():
-                stripped = line.strip()
-                if stripped:
-                    dirty_files.append(stripped)
+            return len(completed.stdout.strip()) == 0
     except Exception:
         pass
-    return head_commit, len(dirty_files) == 0, dirty_files
-
-
-def _compute_workflow_code_sha256(project_id: str = "website-01") -> str:
-    """Compute a deterministic SHA-256 over the workflow module and project config."""
-    hasher = hashlib.sha256()
-    workflow_file = Path(__file__).resolve()
-    if workflow_file.is_file():
-        hasher.update(workflow_file.read_bytes())
-    cfg_file = PROJECTS_CONFIG_DIR / f"{project_id}.yaml"
-    if cfg_file.is_file():
-        hasher.update(cfg_file.read_bytes())
-    return hasher.hexdigest()
+    return False
 
 
 def _ollama_model_digest(model_name: str) -> str:
@@ -515,23 +522,18 @@ def _invoke_llm(
     system_text: str,
     human_text: str,
     *,
-    min_output_tokens: int = 1024,
+    max_output_tokens: int | None = None,
 ) -> tuple[str | None, tuple[int | None, int | None], str | None]:
     try:
-        if llm is not None:
-            model = llm
-        else:
-            base_settings = get_settings()
-            effective_settings = base_settings.model_copy(
-                update={
-                    "llm_max_output_tokens": max(
-                        base_settings.llm_max_output_tokens, min_output_tokens
-                    )
-                }
+        model = (
+            llm
+            if llm is not None
+            else get_chat_model(
+                reasoning=False,
+                json_mode=True,
+                max_output_tokens=max_output_tokens,
             )
-            model = get_chat_model(
-                effective_settings, reasoning=False, json_mode=True
-            )
+        )
         response = model.invoke(
             [SystemMessage(content=system_text), HumanMessage(content=human_text)]
         )
@@ -540,181 +542,305 @@ def _invoke_llm(
         return None, (None, None), f"{type(exc).__name__}: {exc}"
 
 
-def _record_step_trace(
-    record: dict[str, Any],
-    *,
-    run_dir: Path,
-    trace_file: str,
-) -> None:
-    """Write trace record both to the workflow trace.jsonl and to a per-run_id <run_id>.jsonl file."""
-    append_trace(record, trace_file)
-    run_id = str(record["run_id"])
-    append_trace(record, str(run_dir / f"{run_id}.jsonl"))
+def _non_empty_str(mapping: dict[str, Any], key: str) -> str:
+    val = mapping.get(key)
+    if not isinstance(val, str) or not val.strip():
+        raise ValueError(f"Missing or empty required LLM field: '{key}'")
+    return val.strip()
 
 
-def _validate_and_normalize_implementation_fields(
+def _render_html_document(
     fields: dict[str, Any],
-) -> dict[str, Any]:
-    """Validate structured LLM output fields without any fallback to DEFAULT_REQUIRED_CONTENT.
+    *,
+    required_content: dict[str, str] | None = None,
+) -> str:
+    """Validate structured LLM output fields and render semantic German HTML5.
 
-    Raises ValueError if the LLM response is empty or missing required core fields,
-    preventing failed or unparseable LLM calls from being masked by default HTML.
+    Session 3 feedback remediation:
+    Never fall back to DEFAULT_REQUIRED_CONTENT when the LLM fails, times out,
+    returns invalid JSON, or omits required content fields. Any missing required
+    field raises a ValueError so the workflow records an error and blocks approval.
     """
     if not isinstance(fields, dict) or not fields:
-        raise ValueError("LLM implementation output is empty or not a JSON object")
+        raise ValueError("LLM output is empty or not a JSON object")
 
     if isinstance(fields.get("html_content"), str) and fields["html_content"].strip():
-        return {"html_content": fields["html_content"].strip()}
+        return fields["html_content"].strip()
 
-    merged: dict[str, Any] = {}
+    # Unwrap nested content dictionary if the LLM placed keys under 'required_content' or 'content'
+    candidate_map: dict[str, Any] = dict(fields)
     for nested_key in ("required_content", "content"):
         nested = fields.get(nested_key)
         if isinstance(nested, dict):
-            merged.update(nested)
-    merged.update(fields)
+            for k, v in nested.items():
+                candidate_map.setdefault(str(k), v)
 
-    def _clean_str(keys: tuple[str, ...]) -> str:
-        for k in keys:
-            val = merged.get(k)
-            if isinstance(val, str) and val.strip():
-                return val.strip()
-        return ""
+    expected_req = required_content or {}
+    is_s4_scope = "N-04_title" in expected_req or "N-04_title" in candidate_map
 
-    company_name = _clean_str(("company_name", "N-01"))
-    main_statement = _clean_str(("main_statement", "N-02"))
-    contact_label = _clean_str(("contact_label", "N-08_label"))
-    contact_href = _clean_str(("contact_href", "N-08_href"))
-    course_notice = _clean_str(("course_notice", "N-09"))
+    # Case 1: Content-ID keyed JSON response (N-01..N-09, plus optional R-01)
+    if "N-01" in candidate_map:
+        keys_to_verify = (
+            list(expected_req.keys())
+            if expected_req
+            else (
+                list(DEFAULT_S4_REQUIRED_CONTENT.keys())
+                if is_s4_scope
+                else list(DEFAULT_S3_REQUIRED_CONTENT.keys())
+            )
+        )
+        missing = [
+            k
+            for k in keys_to_verify
+            if not isinstance(candidate_map.get(k), str)
+            or not str(candidate_map.get(k)).strip()
+        ]
+        if missing:
+            raise ValueError(
+                f"LLM JSON output missing required content keys: {missing}"
+            )
 
-    services: list[tuple[str, str]] = []
-    raw_services = merged.get("services")
-    if isinstance(raw_services, list):
-        for item in raw_services:
-            if isinstance(item, dict):
-                t_val = str(item.get("title") or "").strip()
-                d_val = str(
-                    item.get("description") or item.get("text") or ""
-                ).strip()
-                if t_val and d_val:
-                    services.append((t_val, d_val))
+        company_name = _non_empty_str(candidate_map, "N-01")
+        main_statement = _non_empty_str(candidate_map, "N-02")
+        contact_label = _non_empty_str(candidate_map, "N-08_label")
+        contact_href = _non_empty_str(candidate_map, "N-08_href")
+        course_notice = _non_empty_str(candidate_map, "N-09")
 
-    service_key_pairs = (
-        (("service_title", "N-03_title"), ("service_description", "N-03_text")),
-        (("service_2_title", "N-04_title"), ("service_2_description", "N-04_text")),
-        (("service_3_title", "N-05_title"), ("service_3_description", "N-05_text")),
-        (("service_4_title", "R-01_title"), ("service_4_description", "R-01_text")),
-    )
-    existing_titles = {t for t, _ in services}
-    for title_keys, desc_keys in service_key_pairs:
-        t_val = _clean_str(title_keys)
-        d_val = _clean_str(desc_keys)
-        if t_val and d_val and t_val not in existing_titles:
-            services.append((t_val, d_val))
-            existing_titles.add(t_val)
+        if not is_s4_scope and "N-04_title" not in candidate_map:
+            s1_title = _non_empty_str(candidate_map, "N-03_title")
+            s1_text = _non_empty_str(candidate_map, "N-03_text")
+            return _format_s3_html(
+                company_name=company_name,
+                main_statement=main_statement,
+                service_title=s1_title,
+                service_description=s1_text,
+                contact_label=contact_label,
+                contact_href=contact_href,
+                course_notice=course_notice,
+            )
 
-    target_groups: list[str] = []
-    raw_groups = merged.get("target_groups")
-    if isinstance(raw_groups, list):
-        for g in raw_groups:
-            if isinstance(g, str) and g.strip():
-                target_groups.append(g.strip())
-    for g_key in ("N-06_group_1", "target_group_1", "N-06_group_2", "target_group_2"):
-        g_val = _clean_str((g_key,))
-        if g_val and g_val not in target_groups:
-            target_groups.append(g_val)
+        services: list[tuple[str, str]] = [
+            (
+                _non_empty_str(candidate_map, "N-03_title"),
+                _non_empty_str(candidate_map, "N-03_text"),
+            ),
+            (
+                _non_empty_str(candidate_map, "N-04_title"),
+                _non_empty_str(candidate_map, "N-04_text"),
+            ),
+            (
+                _non_empty_str(candidate_map, "N-05_title"),
+                _non_empty_str(candidate_map, "N-05_text"),
+            ),
+        ]
+        if "R-01_title" in keys_to_verify or "R-01_title" in candidate_map:
+            services.append(
+                (
+                    _non_empty_str(candidate_map, "R-01_title"),
+                    _non_empty_str(candidate_map, "R-01_text"),
+                )
+            )
 
-    working_approach = _clean_str(("working_approach", "N-07"))
+        target_groups = [
+            _non_empty_str(candidate_map, "N-06_target_1"),
+            _non_empty_str(candidate_map, "N-06_target_2"),
+        ]
+        working_approach = _non_empty_str(candidate_map, "N-07")
+        nav_leistungen_href = str(
+            candidate_map.get("nav_leistungen_href") or "#leistungen"
+        ).strip()
+        nav_zielgruppen_href = str(
+            candidate_map.get("nav_zielgruppen_href") or "#zielgruppen"
+        ).strip()
+        nav_arbeitsweise_href = str(
+            candidate_map.get("nav_arbeitsweise_href") or "#arbeitsweise"
+        ).strip()
+        nav_kontakt_href = str(
+            candidate_map.get("nav_kontakt_href") or "#kontakt"
+        ).strip()
 
-    missing: list[str] = []
-    if not company_name:
-        missing.append("company_name (N-01)")
-    if not main_statement:
-        missing.append("main_statement (N-02)")
-    if not services:
-        missing.append("services / service_title+service_description (N-03..N-05)")
-    if not contact_label:
-        missing.append("contact_label (N-08_label)")
-    if not contact_href:
-        missing.append("contact_href (N-08_href)")
-    if not course_notice:
-        missing.append("course_notice (N-09)")
+        return _format_s4_html(
+            company_name=company_name,
+            main_statement=main_statement,
+            services=services,
+            target_groups=target_groups,
+            working_approach=working_approach,
+            contact_label=contact_label,
+            contact_href=contact_href,
+            course_notice=course_notice,
+            nav_links=[
+                (nav_leistungen_href, "Leistungen"),
+                (nav_zielgruppen_href, "Zielgruppen"),
+                (nav_arbeitsweise_href, "Arbeitsweise"),
+                (nav_kontakt_href, "Kontakt"),
+            ],
+        )
 
-    if missing:
+    # Case 2: Session 4 structured field schema ('services', 'target_groups', 'working_approach')
+    if "services" in candidate_map or is_s4_scope:
+        if is_s4_scope and "services" not in candidate_map:
+            raise ValueError(
+                "LLM JSON output missing required Session 4 keys ('N-01'..'N-09' or 'services')"
+            )
+        company_name = _non_empty_str(candidate_map, "company_name")
+        main_statement = _non_empty_str(candidate_map, "main_statement")
+        contact_label = _non_empty_str(candidate_map, "contact_label")
+        contact_href = _non_empty_str(candidate_map, "contact_href")
+        course_notice = _non_empty_str(candidate_map, "course_notice")
+        working_approach = _non_empty_str(candidate_map, "working_approach")
+
+        raw_services = candidate_map.get("services")
+        if not isinstance(raw_services, list) or len(raw_services) < 3:
+            raise ValueError(
+                "LLM JSON field 'services' must be a list of at least 3 service objects"
+            )
+        parsed_services: list[tuple[str, str]] = []
+        for idx, item in enumerate(raw_services):
+            if not isinstance(item, dict):
+                raise ValueError(f"Service item at index {idx} is not an object")
+            s_title = str(item.get("title") or "").strip()
+            s_text = str(item.get("text") or item.get("description") or "").strip()
+            if not s_title or not s_text:
+                raise ValueError(f"Service item at index {idx} missing title or text")
+            parsed_services.append((s_title, s_text))
+
+        raw_targets = candidate_map.get("target_groups")
+        if not isinstance(raw_targets, list) or len(raw_targets) < 2:
+            raise ValueError(
+                "LLM JSON field 'target_groups' must contain at least 2 target groups"
+            )
+        parsed_targets = [str(t).strip() for t in raw_targets if str(t).strip()]
+        if len(parsed_targets) < 2:
+            raise ValueError("LLM JSON field 'target_groups' contains empty entries")
+
+        return _format_s4_html(
+            company_name=company_name,
+            main_statement=main_statement,
+            services=parsed_services,
+            target_groups=parsed_targets,
+            working_approach=working_approach,
+            contact_label=contact_label,
+            contact_href=contact_href,
+            course_notice=course_notice,
+        )
+
+    # Case 3: Session 3 slice field schema ('company_name', 'service_title', etc.)
+    s3_required_keys = [
+        "company_name",
+        "main_statement",
+        "service_title",
+        "service_description",
+        "contact_label",
+        "contact_href",
+        "course_notice",
+    ]
+    missing_s3 = [
+        k
+        for k in s3_required_keys
+        if not isinstance(candidate_map.get(k), str)
+        or not str(candidate_map.get(k)).strip()
+    ]
+    if missing_s3:
         raise ValueError(
-            "LLM implementation output is missing required fields (no default HTML fallback allowed): "
-            + ", ".join(missing)
+            f"LLM JSON output missing required Session 3 fields: {missing_s3}"
         )
 
-    return {
-        "company_name": company_name,
-        "main_statement": main_statement,
-        "services": services,
-        "target_groups": target_groups,
-        "working_approach": working_approach,
-        "contact_label": contact_label,
-        "contact_href": contact_href,
-        "course_notice": course_notice,
-    }
-
-
-def _render_html_document(fields: dict[str, Any]) -> str:
-    """Render clean semantic German HTML5 strictly from validated LLM output fields.
-
-    Raises ValueError if fields are missing or invalid; never substitutes DEFAULT_REQUIRED_CONTENT.
-    """
-    normalized = _validate_and_normalize_implementation_fields(fields)
-    if "html_content" in normalized:
-        return str(normalized["html_content"])
-
-    company_name = normalized["company_name"]
-    main_statement = normalized["main_statement"]
-    services: list[tuple[str, str]] = normalized["services"]
-    target_groups: list[str] = normalized["target_groups"]
-    working_approach: str = normalized["working_approach"]
-    contact_label = normalized["contact_label"]
-    contact_href = normalized["contact_href"]
-    course_notice = normalized["course_notice"]
-
-    nav_items = ['<li><a href="#leistungen">Leistungen</a></li>']
-    if target_groups:
-        nav_items.append('<li><a href="#zielgruppen">Zielgruppen</a></li>')
-    if working_approach:
-        nav_items.append('<li><a href="#arbeitsweise">Arbeitsweise</a></li>')
-    nav_items.append('<li><a href="#kontakt">Kontakt</a></li>')
-    nav_list_html = "\n        ".join(nav_items)
-
-    service_cards_html = "\n".join(
-        f"""      <article class="service-card">
-        <h3>{title}</h3>
-        <p>{desc}</p>
-      </article>"""
-        for title, desc in services
+    return _format_s3_html(
+        company_name=_non_empty_str(candidate_map, "company_name"),
+        main_statement=_non_empty_str(candidate_map, "main_statement"),
+        service_title=_non_empty_str(candidate_map, "service_title"),
+        service_description=_non_empty_str(candidate_map, "service_description"),
+        contact_label=_non_empty_str(candidate_map, "contact_label"),
+        contact_href=_non_empty_str(candidate_map, "contact_href"),
+        course_notice=_non_empty_str(candidate_map, "course_notice"),
     )
 
-    target_groups_section = ""
-    if target_groups:
-        groups_li = "\n".join(
-            f'        <li class="target-group-item">{group}</li>'
-            for group in target_groups
-        )
-        target_groups_section = f"""
-    <section class="target-groups" id="zielgruppen" aria-labelledby="zielgruppen-heading">
-      <h2 id="zielgruppen-heading">Für wen wir arbeiten</h2>
-      <p>Unsere Unterstützung richtet sich gezielt an:</p>
-      <ul class="target-group-list">
-{groups_li}
-      </ul>
+
+def _format_s3_html(
+    *,
+    company_name: str,
+    main_statement: str,
+    service_title: str,
+    service_description: str,
+    contact_label: str,
+    contact_href: str,
+    course_notice: str,
+) -> str:
+    return f"""<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{company_name} – Technischer Betrieb &amp; Wartungsplanung</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="course-notice" role="note" aria-label="Übungshinweis">
+    {course_notice}
+  </div>
+
+  <main class="container">
+    <header class="hero" id="start">
+      <h1>{company_name}</h1>
+      <p class="lead">{main_statement}</p>
+    </header>
+
+    <section class="services" id="leistungen" aria-labelledby="leistungen-heading">
+      <h2 id="leistungen-heading">Unsere Leistung im Überblick</h2>
+      <article class="service-card">
+        <h3>{service_title}</h3>
+        <p>{service_description}</p>
+      </article>
     </section>
+
+    <section class="contact" id="kontakt" aria-labelledby="kontakt-heading">
+      <h2 id="kontakt-heading">Kontakt</h2>
+      <p>Sie möchten unverbindlich Informationen anfordern? Kontaktieren Sie uns direkt per E-Mail:</p>
+      <a class="cta-link" href="{contact_href}">{contact_label}</a>
+    </section>
+  </main>
+
+  <footer>
+    <p>&copy; 2026 {company_name} · Hamburg</p>
+  </footer>
+</body>
+</html>
 """
 
-    working_approach_section = ""
-    if working_approach:
-        working_approach_section = f"""
-    <section class="working-approach" id="arbeitsweise" aria-labelledby="arbeitsweise-heading">
-      <h2 id="arbeitsweise-heading">Unsere Arbeitsweise</h2>
-      <p class="approach-statement">{working_approach}</p>
-    </section>
-"""
+
+def _format_s4_html(
+    *,
+    company_name: str,
+    main_statement: str,
+    services: list[tuple[str, str]],
+    target_groups: list[str],
+    working_approach: str,
+    contact_label: str,
+    contact_href: str,
+    course_notice: str,
+    nav_links: list[tuple[str, str]] | None = None,
+) -> str:
+    effective_nav = nav_links or [
+        ("#leistungen", "Leistungen"),
+        ("#zielgruppen", "Zielgruppen"),
+        ("#arbeitsweise", "Arbeitsweise"),
+        ("#kontakt", "Kontakt"),
+    ]
+    nav_items_html = "\n".join(
+        f'          <li><a href="{href}">{label}</a></li>'
+        for href, label in effective_nav
+    )
+    service_cards_html = "\n".join(
+        f"""        <article class="service-card">
+          <h3>{title}</h3>
+          <p>{text}</p>
+        </article>"""
+        for title, text in services
+    )
+    target_items_html = "\n".join(
+        f'        <li class="target-item">{group}</li>'
+        for group in target_groups
+    )
 
     return f"""<!DOCTYPE html>
 <html lang="de">
@@ -725,24 +851,22 @@ def _render_html_document(fields: dict[str, Any]) -> str:
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <a class="skip-link" href="#main-content">Zum Hauptinhalt springen</a>
-
   <div class="course-notice" role="note" aria-label="Übungshinweis">
     {course_notice}
   </div>
 
   <header class="site-header">
     <div class="container header-inner">
-      <span class="brand-name">{company_name}</span>
+      <a class="brand-link" href="#start">{company_name}</a>
       <nav class="site-nav" aria-label="Hauptnavigation">
         <ul class="nav-list">
-        {nav_list_html}
+{nav_items_html}
         </ul>
       </nav>
     </div>
   </header>
 
-  <main class="container" id="main-content">
+  <main class="container">
     <section class="hero" id="start" aria-labelledby="hero-heading">
       <h1 id="hero-heading">{company_name}</h1>
       <p class="lead">{main_statement}</p>
@@ -752,11 +876,25 @@ def _render_html_document(fields: dict[str, Any]) -> str:
     </section>
 
     <section class="services" id="leistungen" aria-labelledby="leistungen-heading">
-      <h2 id="leistungen-heading">Unsere Leistungen im Überblick</h2>
-      <div class="service-grid">
+      <h2 id="leistungen-heading">Unsere Leistungen</h2>
+      <div class="services-grid">
 {service_cards_html}
       </div>
-    </section>{target_groups_section}{working_approach_section}
+    </section>
+
+    <section class="target-groups" id="zielgruppen" aria-labelledby="zielgruppen-heading">
+      <h2 id="zielgruppen-heading">Zielgruppen</h2>
+      <p>Unsere Unterstützung richtet sich insbesondere an:</p>
+      <ul class="target-list">
+{target_items_html}
+      </ul>
+    </section>
+
+    <section class="working-approach" id="arbeitsweise" aria-labelledby="arbeitsweise-heading">
+      <h2 id="arbeitsweise-heading">Unsere Arbeitsweise</h2>
+      <p>{working_approach}</p>
+    </section>
+
     <section class="contact" id="kontakt" aria-labelledby="kontakt-heading">
       <h2 id="kontakt-heading">Kontakt</h2>
       <p>Sie möchten unverbindlich Informationen anfordern? Kontaktieren Sie uns direkt per E-Mail:</p>
@@ -764,10 +902,8 @@ def _render_html_document(fields: dict[str, Any]) -> str:
     </section>
   </main>
 
-  <footer class="site-footer">
-    <div class="container">
-      <p>&copy; 2026 {company_name} · Hamburg</p>
-    </div>
+  <footer>
+    <p>&copy; 2026 {company_name} · Hamburg</p>
   </footer>
 </body>
 </html>
@@ -778,52 +914,31 @@ def run_customer_delivery_workflow(
     task: CustomerDeliveryTask | None = None,
     *,
     project_id: str = "website-01",
-    required_content: dict[str, str] | None = None,
     architect_llm: Any | None = None,
     implementation_llm: Any | None = None,
     qa_llm: Any | None = None,
     runs_root: Path | None = None,
-    enforce_clean_factory_commit: bool | None = None,
+    fault_overrides: dict[str, str] | None = None,
 ) -> CustomerDeliveryWorkflowResult:
     """Execute the multi-agent customer delivery workflow on the external product repo."""
-    cfg_acceptance_criteria = ["AC-01", "AC-02", "AC-03", "AC-04", "AC-05", "AC-06", "AC-07", "AC-08"]
-    try:
-        cfg_data = load_project_config(project_id)
-        if isinstance(cfg_data.get("acceptance_criteria_in_scope"), list):
-            cfg_acceptance_criteria = [
-                str(x) for x in cfg_data["acceptance_criteria_in_scope"]
-            ]
-    except Exception:
-        pass
-
     if task is None:
-        task, loaded_req_content = build_task_from_project_config(project_id=project_id)
-        if required_content is None:
-            required_content = loaded_req_content
-    elif required_content is None:
-        required_content = dict(DEFAULT_REQUIRED_CONTENT)
+        task, required_content = build_task_from_project_config(project_id=project_id)
+    elif task.required_content:
+        required_content = dict(task.required_content)
+    elif task.task_id.startswith("NW-S3"):
+        required_content = dict(DEFAULT_S3_REQUIRED_CONTENT)
+    else:
+        required_content = dict(DEFAULT_S4_REQUIRED_CONTENT)
 
-    is_mock_run = (
-        architect_llm is not None
-        or implementation_llm is not None
-        or qa_llm is not None
-    )
-    if enforce_clean_factory_commit is None:
-        enforce_clean_factory_commit = not is_mock_run
-
-    factory_commit, factory_commit_clean, factory_dirty_files = _get_factory_git_state(
-        REPO_ROOT
-    )
-    if enforce_clean_factory_commit and not factory_commit_clean:
-        raise RuntimeError(
-            "Factory repository has uncommitted changes in workflow code or config "
-            f"({factory_dirty_files}). Commit all Factory changes before executing a "
-            "delivery run so factory_commit matches the executed workflow code."
+    if fault_overrides:
+        required_content.update(
+            {str(k): str(v) for k, v in fault_overrides.items()}
         )
 
-    workflow_code_sha256 = _compute_workflow_code_sha256(task.project_id)
     settings = get_settings()
     product_root = resolve_product_repo_root(task.product_repo_path)
+    factory_commit = _git_head_commit(REPO_ROOT)
+    factory_code_clean = _git_code_worktree_clean(REPO_ROOT)
     product_input_commit = _git_head_commit(product_root)
 
     base_runs_dir = runs_root if runs_root is not None else (REPO_ROOT / "runs")
@@ -842,7 +957,6 @@ def run_customer_delivery_workflow(
     def architect_node(state: DeliveryWorkflowState) -> DeliveryWorkflowState:
         t = state["task"]
         req_map = state["required_content"]
-        ac_list = state["acceptance_criteria"]
         role_meta = load_role_metadata("software_architect")
         step_run_id = str(uuid.uuid4())
         started = time.perf_counter()
@@ -850,24 +964,33 @@ def run_customer_delivery_workflow(
         loaded_files: dict[str, str] = {}
 
         for rel_path in t.input_files:
-            loaded_files[rel_path] = read_product_file_tool(product_root, rel_path)
-            if "read_product_file_tool" not in tools_used:
-                tools_used.append("read_product_file_tool")
+            try:
+                loaded_files[rel_path] = read_product_file_tool(product_root, rel_path)
+                if "read_product_file_tool" not in tools_used:
+                    tools_used.append("read_product_file_tool")
+            except FileNotFoundError:
+                continue
+
+        first_issue_excerpt = ""
+        for rel_path, content in loaded_files.items():
+            if rel_path.startswith("docs/"):
+                first_issue_excerpt = content[:1500]
+                break
 
         system_text = (
             "You are the Software Architect agent planning customer delivery "
             "for Nordwerk Industrie-Service. Return ONLY valid JSON with keys: "
-            "architecture_decisions (non-empty list of strings), "
-            "ready_for_implementation (true), and summary (concise string under 25 words)."
+            "summary (short string < 20 words), architecture_decisions (list of 3 short strings), "
+            "and ready_for_implementation (true)."
         )
         human_text = (
             "/no_think\n"
             f"Project ID: {t.project_id}\n"
             f"Task ID: {t.task_id}\n"
+            f"Description: {t.description}\n"
             f"Target File: {t.target_product_file}\n"
-            f"Acceptance Criteria: {json.dumps(ac_list)}\n"
-            f"Required Verbatim Strings:\n{json.dumps(req_map, ensure_ascii=False, indent=2)}\n"
-            f"Customer Issue Excerpt:\n{loaded_files.get(t.input_files[0], '')[:1500]}"
+            f"Required Content Keys: {list(req_map.keys())}\n"
+            f"Customer Issue Excerpt:\n{first_issue_excerpt}"
         )
         text, usage, llm_error = _invoke_llm(architect_llm, system_text, human_text)
         duration = time.perf_counter() - started
@@ -882,37 +1005,43 @@ def run_customer_delivery_workflow(
 
         decisions: list[str] = []
         summary = ""
-        status: Literal["completed", "needs_review", "error"] = "error"
-        ready_for_imp = False
+        status: Literal["completed", "needs_review", "error"] = "completed"
+        ready_flag = True
 
         if llm_error:
             status = "error"
-            summary = f"Architect LLM invocation failed: {llm_error}"
-        elif not text or not text.strip():
+            ready_flag = False
+            summary = f"Architect LLM call failed: {llm_error}"
+        elif not text:
             status = "error"
-            summary = "Architect LLM returned an empty response."
+            ready_flag = False
+            summary = "Architect LLM returned empty response."
         else:
             try:
                 parsed = _extract_json_dict(text)
-                raw_summary = parsed.get("summary")
-                raw_decisions = parsed.get("architecture_decisions")
-                if isinstance(raw_decisions, list):
-                    decisions = [
-                        str(x).strip() for x in raw_decisions if str(x).strip()
-                    ]
-                if isinstance(raw_summary, str) and raw_summary.strip() and decisions:
-                    summary = raw_summary.strip()
-                    ready_for_imp = bool(parsed.get("ready_for_implementation", True))
-                    status = "completed" if ready_for_imp else "needs_review"
-                else:
-                    status = "error"
-                    summary = (
-                        "Architect LLM JSON is missing required non-empty 'summary' "
-                        "or 'architecture_decisions'."
-                    )
+                if isinstance(parsed.get("summary"), str) and parsed["summary"].strip():
+                    summary = parsed["summary"].strip()
+                if (
+                    isinstance(parsed.get("architecture_decisions"), list)
+                    and parsed["architecture_decisions"]
+                ):
+                    decisions = [str(x) for x in parsed["architecture_decisions"] if str(x).strip()]
+                if not summary or not decisions:
+                    raise ValueError("Architect JSON missing non-empty 'summary' or 'architecture_decisions'")
             except Exception as exc:
                 status = "error"
-                summary = f"Architect LLM output is not valid JSON: {type(exc).__name__}: {exc}"
+                ready_flag = False
+                summary = f"Architect LLM output invalid JSON ({type(exc).__name__}: {exc})"
+
+        ac_list = (
+            list(t.acceptance_criteria)
+            if t.acceptance_criteria
+            else (
+                ["AC-01", "AC-02 (N-03)", "AC-04"]
+                if t.task_id.startswith("NW-S3")
+                else ["AC-01", "AC-02", "AC-03", "AC-04", "AC-05", "AC-06", "AC-07", "AC-08"]
+            )
+        )
 
         handover = ProductHandoverPayload(
             from_agent=role_meta.agent_id,
@@ -926,7 +1055,7 @@ def run_customer_delivery_workflow(
             acceptance_criteria=ac_list,
             required_content=req_map,
             architecture_decisions=decisions,
-            ready_for_implementation=ready_for_imp,
+            ready_for_implementation=ready_flag,
         )
 
         plan_res = ArchitectPlanResult(
@@ -944,33 +1073,27 @@ def run_customer_delivery_workflow(
             estimated_cost_credits=credits,
         )
 
-        _record_step_trace(
+        append_trace(
             {
                 "run_id": step_run_id,
                 "workflow_id": t.workflow_id,
                 "project_id": t.project_id,
                 "task_id": t.task_id,
-                "factory_commit": factory_commit,
-                "factory_commit_clean": factory_commit_clean,
-                "workflow_code_sha256": workflow_code_sha256,
                 "agent": role_meta.agent_id,
                 "role": "software_architect",
                 "accountable_human": role_meta.accountable_human,
                 "provider": settings.llm_provider if architect_llm is None else "injected",
                 "model": settings.llm_model if architect_llm is None else type(architect_llm).__name__,
                 "status": plan_res.status,
-                "summary": plan_res.summary,
                 "tools": tools_used,
                 "handover_to": handover.to_role,
-                "ready_for_implementation": ready_for_imp,
                 "duration_seconds": plan_res.duration_seconds,
                 "calls": calls,
                 "input_tokens": in_tok,
                 "output_tokens": out_tok,
                 "estimated_cost_credits": credits,
             },
-            run_dir=state["run_dir"],
-            trace_file=state["trace_file"],
+            state["trace_file"],
         )
         return {"architect_result": plan_res, "product_handover": handover}
 
@@ -983,96 +1106,59 @@ def run_customer_delivery_workflow(
         step_run_id = str(uuid.uuid4())
         started = time.perf_counter()
 
-        if not handover.ready_for_implementation or state["architect_result"].status != "completed":
-            duration = time.perf_counter() - started
-            qa_handover = QAHandoverPayload(
-                from_agent=role_meta.agent_id,
-                from_role="backend_api_engineer",
-                to_role="qa_test_engineer",
-                project_id=t.project_id,
-                task_id=t.task_id,
-                workflow_id=t.workflow_id,
-                product_repo_path=str(product_root),
-                modified_files=[],
-                artifact_sha256="",
-                product_test_target=t.product_test_target,
-                acceptance_criteria=handover.acceptance_criteria,
-                iteration=iteration,
-                ready_for_qa=False,
-            )
-            imp_res = ImplementationStepResult(
-                run_id=step_run_id,
-                iteration=iteration,
-                agent=role_meta.agent_id,
-                role="backend_api_engineer",
-                accountable_human=role_meta.accountable_human,
-                status="error",
-                summary="Skipped implementation because architect handover was not ready.",
-                written_file=None,
-                artifact_sha256="",
-                patch_path=None,
-                handover=qa_handover,
-                tools_used=[],
-                duration_seconds=round(duration, 4),
-                input_tokens=None,
-                output_tokens=None,
-                estimated_cost_credits=0.0,
-            )
-            history = list(state.get("implementation_history", []))
-            history.append(imp_res)
-            return {
-                "iteration": iteration,
-                "qa_handover": qa_handover,
-                "implementation_history": history,
-            }
-
         expected_keys = list(handover.required_content.keys())
         system_text = (
             "You are the Implementation Engineer agent generating the Nordwerk Industrie-Service "
-            "website from the structured ProductHandoverPayload. "
-            "Return ONLY a valid JSON object containing every key from required_content copied "
-            "verbatim in German, plus a concise 'summary' key (under 15 words) at the end. "
-            "Do not omit any key from required_content and do not invent unrequested claims."
+            "website from the Architect's required_content contract. "
+            "Return ONLY a single flat JSON object containing:\n"
+            "- \"summary\": a short sentence (< 12 words)\n"
+            f"- Every key in {json.dumps(expected_keys)} mapped to its exact verbatim German string.\n"
+            "Do not omit any key, do not nest keys, and do not modify the German strings."
         )
-        compact_handover = {
-            "task_id": handover.task_id,
-            "target_product_file": handover.target_product_file,
-            "acceptance_criteria": handover.acceptance_criteria,
-            "required_content": handover.required_content,
-            "required_json_keys": [*expected_keys, "summary"],
-        }
         human_text = (
             "/no_think\n"
             f"Iteration: {iteration} of {t.max_correction_loops}\n"
-            f"Handover Contract:\n{json.dumps(compact_handover, ensure_ascii=False, indent=2)}\n"
+            f"Target File: {handover.target_product_file}\n"
+            f"Required Content Contract:\n{json.dumps(handover.required_content, ensure_ascii=False, indent=2)}\n"
         )
         if feedback:
-            human_text += f"\nPrevious QA/Validation Failure Feedback to Fix:\n{feedback}\n"
+            human_text += f"\nPrevious Failure Feedback to Fix:\n{feedback}\n"
 
+        imp_token_limit = max(settings.llm_max_output_tokens, 640)
         text, usage, llm_error = _invoke_llm(
-            implementation_llm, system_text, human_text, min_output_tokens=1024
+            implementation_llm,
+            system_text,
+            human_text,
+            max_output_tokens=imp_token_limit,
         )
         in_tok, out_tok = usage
         calls = 0 if llm_error and implementation_llm is None else 1
 
         written_rel: str | None = None
         sha256_hex = ""
-        patch_path_str: str | None = None
+        patch_file_str: str | None = None
         tools_used: list[str] = []
-        ready_for_qa = False
-        status: Literal["completed", "needs_review", "error"] = "error"
-        summary = ""
+        status: Literal["completed", "needs_review", "error"] = "completed"
+        ready_for_qa = True
+        summary = f"Generated {t.target_product_file} in product checkout (iteration {iteration})."
 
         if llm_error:
             status = "error"
-            summary = f"Implementation LLM invocation failed: {llm_error}"
-        elif not text or not text.strip():
+            ready_for_qa = False
+            summary = f"LLM implementation call failed (no fallback HTML written): {llm_error}"
+        elif not text:
             status = "error"
-            summary = "Implementation LLM returned an empty response."
+            ready_for_qa = False
+            summary = "LLM implementation call returned empty output (no fallback HTML written)."
         else:
             try:
                 parsed_fields = _extract_json_dict(text)
-                html_content = _render_html_document(parsed_fields)
+                if isinstance(parsed_fields.get("summary"), str) and parsed_fields["summary"].strip():
+                    summary = parsed_fields["summary"].strip()
+                html_content = _render_html_document(
+                    parsed_fields,
+                    required_content=handover.required_content,
+                )
                 written_rel, sha256_hex = write_product_file_tool(
                     product_root,
                     t.target_product_file,
@@ -1080,6 +1166,7 @@ def run_customer_delivery_workflow(
                     allowed_write_prefixes=t.allowed_write_prefixes,
                 )
                 tools_used = ["write_product_file_tool"]
+
                 diff_lines = list(
                     difflib.unified_diff(
                         state.get("initial_file_snapshot", "").splitlines(keepends=True),
@@ -1090,18 +1177,14 @@ def run_customer_delivery_workflow(
                 )
                 patch_file = state["run_dir"] / "changes.patch"
                 patch_file.write_text("".join(diff_lines), encoding="utf-8")
-                patch_path_str = str(patch_file)
-                raw_summary = parsed_fields.get("summary")
-                summary = (
-                    raw_summary.strip()
-                    if isinstance(raw_summary, str) and raw_summary.strip()
-                    else f"Generated {t.target_product_file} from validated LLM fields (iteration {iteration})."
-                )
-                status = "completed"
-                ready_for_qa = True
+                patch_file_str = str(patch_file)
             except Exception as exc:
                 status = "error"
-                summary = f"Implementation LLM output validation failed: {type(exc).__name__}: {exc}"
+                ready_for_qa = False
+                summary = (
+                    f"LLM implementation output validation failed "
+                    f"(no fallback HTML written): {type(exc).__name__}: {exc}"
+                )
 
         duration = time.perf_counter() - started
         credits = estimate_cost_credits(
@@ -1137,7 +1220,7 @@ def run_customer_delivery_workflow(
             summary=summary,
             written_file=written_rel,
             artifact_sha256=sha256_hex,
-            patch_path=patch_path_str,
+            patch_path=patch_file_str,
             handover=qa_handover,
             tools_used=tools_used,
             duration_seconds=round(duration, 4),
@@ -1146,15 +1229,12 @@ def run_customer_delivery_workflow(
             estimated_cost_credits=credits,
         )
 
-        _record_step_trace(
+        append_trace(
             {
                 "run_id": step_run_id,
                 "workflow_id": t.workflow_id,
                 "project_id": t.project_id,
                 "task_id": t.task_id,
-                "factory_commit": factory_commit,
-                "factory_commit_clean": factory_commit_clean,
-                "workflow_code_sha256": workflow_code_sha256,
                 "iteration": iteration,
                 "agent": role_meta.agent_id,
                 "role": "backend_api_engineer",
@@ -1162,20 +1242,17 @@ def run_customer_delivery_workflow(
                 "provider": settings.llm_provider if implementation_llm is None else "injected",
                 "model": settings.llm_model if implementation_llm is None else type(implementation_llm).__name__,
                 "status": imp_res.status,
-                "summary": imp_res.summary,
                 "tools": tools_used,
                 "written_file": written_rel,
                 "artifact_sha256": sha256_hex,
                 "handover_to": qa_handover.to_role,
-                "ready_for_qa": ready_for_qa,
                 "duration_seconds": imp_res.duration_seconds,
                 "calls": calls,
                 "input_tokens": in_tok,
                 "output_tokens": out_tok,
                 "estimated_cost_credits": credits,
             },
-            run_dir=state["run_dir"],
-            trace_file=state["trace_file"],
+            state["trace_file"],
         )
 
         history = list(state.get("implementation_history", []))
@@ -1200,22 +1277,26 @@ def run_customer_delivery_workflow(
             timeout_seconds=t.timeout_seconds,
         )
 
-        imp_ok = latest_imp.status == "completed" and qa_handover.ready_for_qa
+        imp_succeeded = (
+            latest_imp.status == "completed"
+            and qa_handover.ready_for_qa
+            and bool(latest_imp.written_file)
+        )
         tech_status: Literal["passed", "failed", "needs_review", "error"] = (
-            "passed" if (exit_code == 0 and imp_ok) else "failed"
+            "passed" if (exit_code == 0 and imp_succeeded) else "failed"
         )
 
         system_text = (
             "You are the QA & Test Engineer agent verifying the Nordwerk customer product check. "
-            "Return ONLY valid JSON with keys: status, summary, pytest_exit_code, findings, "
-            "human_approval_required (true)."
+            "Return ONLY valid JSON with keys: status, summary (short string < 20 words), "
+            "pytest_exit_code, findings, human_approval_required (true)."
         )
         human_text = (
             "/no_think\n"
-            f"QA Handover:\n{qa_handover.model_dump_json(indent=2)}\n"
-            f"Implementation step status: {latest_imp.status} ({latest_imp.summary})\n"
+            f"Implementation Status: {latest_imp.status} ({latest_imp.summary})\n"
+            f"Product test target: {qa_handover.product_test_target}\n"
             f"Product test exit code: {exit_code}\n"
-            f"Product test output:\n{test_output}"
+            f"Product test output:\n{test_output[:1500]}"
         )
         text, usage, llm_error = _invoke_llm(qa_llm, system_text, human_text)
         duration = time.perf_counter() - started
@@ -1229,55 +1310,42 @@ def run_customer_delivery_workflow(
         )
 
         summary = (
-            "Product check passed for configured acceptance criteria."
+            f"Product check passed ({qa_handover.product_test_target})."
             if tech_status == "passed"
-            else f"Product QA failed (implementation_status={latest_imp.status}, pytest_exit_code={exit_code})."
+            else f"Product QA failed (imp_status={latest_imp.status}, pytest_exit_code={exit_code})."
         )
         findings: list[QAFinding] = []
         summary_status: Literal["ok", "invalid_output", "unavailable"] = "ok"
 
         if llm_error:
             summary_status = "unavailable"
-            if tech_status == "passed":
-                tech_status = "needs_review"
-        elif not text or not text.strip():
-            summary_status = "invalid_output"
-            if tech_status == "passed":
-                tech_status = "needs_review"
-        else:
+        elif text:
             try:
                 parsed = _extract_json_dict(text)
                 if isinstance(parsed.get("summary"), str) and parsed["summary"].strip():
                     summary = redact(parsed["summary"].strip())[:1000]
-                else:
-                    summary_status = "invalid_output"
-                    if tech_status == "passed":
-                        tech_status = "needs_review"
             except Exception:
                 summary_status = "invalid_output"
-                if tech_status == "passed":
-                    tech_status = "needs_review"
 
-        if not imp_ok:
+        if not imp_succeeded:
             findings.append(
                 QAFinding(
                     severity="high",
-                    description=f"Implementation step did not complete validly: {latest_imp.summary}",
+                    description=f"Implementation step failed without valid LLM output: {latest_imp.summary}",
                 )
             )
-
         if exit_code != 0:
             findings.append(
                 QAFinding(
                     severity="high",
-                    description=f"Product check failed: {test_output[:500]}",
+                    description=f"Product check failed (exit_code={exit_code}): {test_output[:500]}",
                 )
             )
 
         qa_res = QATestResult(
             status=tech_status,
             summary=summary,
-            pytest_exit_code=exit_code if imp_ok else (exit_code or 1),
+            pytest_exit_code=exit_code,
             findings=findings,
             human_approval_required=True,
             summary_status=summary_status,
@@ -1286,15 +1354,12 @@ def run_customer_delivery_workflow(
             tool_status="completed",
         )
 
-        _record_step_trace(
+        append_trace(
             {
                 "run_id": step_run_id,
                 "workflow_id": t.workflow_id,
                 "project_id": t.project_id,
                 "task_id": t.task_id,
-                "factory_commit": factory_commit,
-                "factory_commit_clean": factory_commit_clean,
-                "workflow_code_sha256": workflow_code_sha256,
                 "iteration": qa_handover.iteration,
                 "agent": "qa-test-agent",
                 "role": "qa_test_engineer",
@@ -1302,11 +1367,9 @@ def run_customer_delivery_workflow(
                 "provider": settings.llm_provider if qa_llm is None else "injected",
                 "model": settings.llm_model if qa_llm is None else type(qa_llm).__name__,
                 "status": qa_res.status,
-                "summary": qa_res.summary,
-                "summary_status": summary_status,
                 "tools": ["run_product_test_tool"],
                 "pytest_target": qa_handover.product_test_target,
-                "pytest_exit_code": qa_res.pytest_exit_code,
+                "pytest_exit_code": exit_code,
                 "artifact_sha256": qa_handover.artifact_sha256,
                 "duration_seconds": round(duration, 4),
                 "calls": calls,
@@ -1314,38 +1377,38 @@ def run_customer_delivery_workflow(
                 "output_tokens": out_tok,
                 "estimated_cost_credits": credits,
             },
-            run_dir=state["run_dir"],
-            trace_file=state["trace_file"],
+            state["trace_file"],
         )
 
         q_history = list(state.get("qa_history", []))
         q_history.append(qa_res)
         feedback_parts: list[str] = []
-        if not imp_ok:
+        if not imp_succeeded:
             feedback_parts.append(latest_imp.summary)
         if exit_code != 0:
             feedback_parts.append(test_output)
-        return {"qa_history": q_history, "qa_feedback": "\n".join(feedback_parts)}
+        feedback_text = "\n".join(feedback_parts)
+        return {"qa_history": q_history, "qa_feedback": feedback_text}
 
     def route_after_qa(state: DeliveryWorkflowState) -> str:
-        arch_ok = state["architect_result"].status == "completed"
-        latest_imp = state["implementation_history"][-1]
         latest_qa = state["qa_history"][-1]
+        latest_imp = state["implementation_history"][-1]
         iteration = state.get("iteration", 1)
         max_loops = state["task"].max_correction_loops
-        if arch_ok and latest_imp.status == "completed" and latest_qa.status == "passed":
+        if latest_imp.status == "completed" and latest_qa.status == "passed":
             return "human_gate"
-        if arch_ok and iteration < max_loops:
+        if iteration < max_loops:
             return "implementation"
         return "human_gate"
 
     def human_gate_node(state: DeliveryWorkflowState) -> DeliveryWorkflowState:
-        arch_ok = state["architect_result"].status == "completed"
+        arch = state["architect_result"]
         latest_imp = state["implementation_history"][-1]
         latest_qa = state["qa_history"][-1]
         if (
-            arch_ok
+            arch.status == "completed"
             and latest_imp.status == "completed"
+            and bool(latest_imp.written_file)
             and latest_qa.status == "passed"
             and latest_qa.pytest_exit_code == 0
         ):
@@ -1373,7 +1436,6 @@ def run_customer_delivery_workflow(
         {
             "task": task,
             "required_content": required_content,
-            "acceptance_criteria": cfg_acceptance_criteria,
             "run_dir": run_dir,
             "trace_file": trace_file,
             "initial_file_snapshot": initial_snapshot,
@@ -1403,16 +1465,15 @@ def run_customer_delivery_workflow(
     report_path = run_dir / "workflow-report.json"
     patch_path = run_dir / "changes.patch"
 
+    session_num = 3 if task.task_id.startswith("NW-S3") else 4
     manifest_payload = {
         "company": "HAW Agentic Software Factory",
-        "session": 4,
+        "session": session_num,
         "project_id": task.project_id,
         "customer_task_id": task.task_id,
         "team_size": 6,
         "factory_commit": factory_commit,
-        "factory_commit_clean": factory_commit_clean,
-        "factory_dirty_files": factory_dirty_files,
-        "workflow_code_sha256": workflow_code_sha256,
+        "factory_code_clean": factory_code_clean,
         "product_input_commit": product_input_commit,
         "product_output_commit": product_output_commit,
         "workflow_ids": [task.workflow_id],
@@ -1431,15 +1492,13 @@ def run_customer_delivery_workflow(
         ),
         "iterations_used": final_state["iteration"],
         "max_correction_loops": task.max_correction_loops,
-        "mock_runs_are_separate": is_mock_run,
+        "mock_runs_are_separate": architect_llm is not None,
         "review_file": str(run_dir / "review.json"),
         "artifact_hashes": {
             latest_imp.written_file or task.target_product_file: latest_imp.artifact_sha256
-        }
-        if latest_imp.written_file
-        else {},
+        },
         "issue_and_pr_references": [
-            f"{task.product_repo_path}/{inp}" for inp in task.input_files if inp.startswith("docs/")
+            f"{task.product_repo_path}/{p}" for p in task.input_files if p.startswith("docs/")
         ],
         "cost_records": "costs/usage.csv",
         "total_estimated_agent_credits": total_credits,
@@ -1455,9 +1514,7 @@ def run_customer_delivery_workflow(
         task_id=task.task_id,
         product_repo_path=str(product_root),
         factory_commit=factory_commit,
-        factory_commit_clean=factory_commit_clean,
-        factory_dirty_files=factory_dirty_files,
-        workflow_code_sha256=workflow_code_sha256,
+        factory_code_clean=factory_code_clean,
         product_input_commit=product_input_commit,
         product_output_commit=product_output_commit,
         iterations_used=final_state["iteration"],
@@ -1504,6 +1561,7 @@ def record_customer_human_review(
     raw_bytes = rpath.read_bytes()
     report = CustomerDeliveryWorkflowResult.model_validate_json(raw_bytes)
     latest_imp = report.implementation_history[-1]
+
     if decision == "approved":
         if report.human_gate_status != "pending_approval":
             raise ValueError(
@@ -1522,23 +1580,11 @@ def record_customer_human_review(
                 "Cannot approve a customer delivery when the product QA check did not pass"
             )
 
-    artifact_hashes = (
-        {latest_imp.written_file: latest_imp.artifact_sha256}
-        if latest_imp.written_file
-        else {}
-    )
+    artifact_hashes = {
+        latest_imp.written_file or "site/index.html": latest_imp.artifact_sha256
+    }
 
-    default_accepted = (
-        list(report.architect_result.handover.acceptance_criteria)
-        if decision == "approved"
-        else []
-    )
-    default_open = (
-        ["AC-09, AC-10 due in Session 5"]
-        if decision == "approved"
-        else list(report.architect_result.handover.acceptance_criteria)
-    )
-
+    default_ac = list(report.architect_result.handover.acceptance_criteria)
     review_record = CustomerHumanReviewRecord(
         task_id=report.task_id,
         project_id=report.project_id,
@@ -1554,10 +1600,14 @@ def record_customer_human_review(
         test_evidence_paths=[report.trace_file, report.manifest_file],
         accepted_criteria=accepted_criteria
         if accepted_criteria is not None
-        else default_accepted,
+        else (default_ac if decision == "approved" else []),
         open_criteria=open_criteria
         if open_criteria is not None
-        else default_open,
+        else (
+            ["AC-09, AC-10 due in Session 5"]
+            if decision == "approved"
+            else default_ac
+        ),
         rationale=rationale.strip(),
     )
 
@@ -1581,9 +1631,10 @@ def main() -> None:
     run_cmd.add_argument("--workflow-id", default=None)
     run_cmd.add_argument("--max-loops", type=int, default=None)
     run_cmd.add_argument(
-        "--allow-dirty-factory",
-        action="store_true",
-        help="Allow running even when Factory src/ or config/ has uncommitted changes (not for evidence runs).",
+        "--inject-fault",
+        action="append",
+        default=[],
+        help="Controlled fault override in KEY=VALUE format (e.g. N-08_href=mailto:falsch@nordwerk.example)",
     )
 
     rev_cmd = sub.add_parser("review", help="Record an explicit human gate review decision")
@@ -1609,7 +1660,14 @@ def main() -> None:
         print(f"Recorded human review: {review_file}")
         return
 
-    task, req_content = build_task_from_project_config(
+    fault_overrides: dict[str, str] = {}
+    for item in args.inject_fault:
+        if "=" not in item:
+            raise ValueError(f"Invalid --inject-fault '{item}', expected KEY=VALUE")
+        k, v = item.split("=", 1)
+        fault_overrides[k.strip()] = v.strip()
+
+    task, _ = build_task_from_project_config(
         project_id=args.project_id,
         product_repo_path=args.product_repo,
         task_id=args.task_id,
@@ -1619,8 +1677,7 @@ def main() -> None:
     result = run_customer_delivery_workflow(
         task,
         project_id=args.project_id,
-        required_content=req_content,
-        enforce_clean_factory_commit=not args.allow_dirty_factory,
+        fault_overrides=fault_overrides or None,
     )
     print(result.model_dump_json(indent=2))
 

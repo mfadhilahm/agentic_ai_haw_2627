@@ -11,6 +11,7 @@ def get_chat_model(
     *,
     reasoning: bool | None = None,
     json_mode: bool = False,
+    max_output_tokens: int | None = None,
 ) -> Any:
     """Return the configured LangChain chat-model abstraction.
 
@@ -20,6 +21,11 @@ def get_chat_model(
     Thinking-only model variants cannot be made non-thinking by this flag.
     """
     settings = settings or get_settings()
+    token_limit = (
+        max_output_tokens
+        if max_output_tokens is not None and max_output_tokens > 0
+        else settings.llm_max_output_tokens
+    )
 
     if settings.llm_provider == "ollama":
         effective_reasoning = False if (json_mode and reasoning is None) else reasoning
@@ -28,8 +34,8 @@ def get_chat_model(
             base_url=settings.llm_base_url,
             temperature=settings.llm_temperature,
             client_kwargs={"timeout": settings.llm_timeout_seconds},
-            num_predict=settings.llm_max_output_tokens,
-            reasoning=False if json_mode and reasoning is None else reasoning,
+            num_predict=token_limit,
+            reasoning=effective_reasoning,
             format="json" if json_mode else None,
         )
 
@@ -42,7 +48,7 @@ def get_chat_model(
             api_key=settings.llm_api_key or "not-required",
             temperature=settings.llm_temperature,
             timeout=settings.llm_timeout_seconds,
-            max_tokens=settings.llm_max_output_tokens,
+            max_tokens=token_limit,
             max_retries=0,
             stream_usage=False,
             use_responses_api=False,

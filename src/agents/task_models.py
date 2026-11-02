@@ -55,14 +55,13 @@ class HandoverPayload(BaseModel):
 
 
 class CustomerDeliveryTask(EngineeringTask):
-    """Session 3 customer product delivery task addressing an external product checkout."""
+    """Session 3–5 customer product delivery task addressing an external product checkout."""
 
-    task_id: str = Field(default="NW-S3-001", min_length=3, max_length=128)
+    task_id: str = Field(default="NW-S3-001", min_length=2, max_length=128)
     task_type: str = Field(default="customer_product_delivery", min_length=1, max_length=80)
     description: str = Field(
         default=(
-            "Deliver the Nordwerk Industrie-Service Session 3 website slice "
-            "(AC-01, AC-02 service N-03, AC-04) in the customer repository."
+            "Deliver the Nordwerk Industrie-Service website in the customer repository."
         ),
         min_length=1,
         max_length=4000,
@@ -76,6 +75,8 @@ class CustomerDeliveryTask(EngineeringTask):
     target_product_file: str = Field(default="site/index.html", min_length=1, max_length=256)
     product_test_target: str = Field(default="tests/test_website_s3.py", min_length=1, max_length=256)
     allowed_write_prefixes: list[str] = Field(default_factory=lambda: ["site/"])
+    acceptance_criteria: list[str] = Field(default_factory=list)
+    required_content: dict[str, str] = Field(default_factory=dict)
     max_correction_loops: int = Field(default=2, ge=1, le=5)
     timeout_seconds: int = Field(default=180, ge=1, le=300)
 

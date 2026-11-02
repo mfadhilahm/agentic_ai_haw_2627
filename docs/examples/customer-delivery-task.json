@@ -1,0 +1,21 @@
+{
+  "task_id": "NW-S3-001",
+  "workflow_id": "WF-WEBSITE01-S3-CUSTOM",
+  "task_type": "customer_product_delivery",
+  "description": "Deliver the Nordwerk Industrie-Service Session 3 website slice (AC-01, AC-02 service N-03, AC-04) in the customer repository.",
+  "assigned_role": "software_architect",
+  "project_id": "website-01",
+  "product_repo_path": "../client-01-website",
+  "input_files": [
+    "docs/issue-01-session-03.md",
+    "site/index.html",
+    "site/styles.css"
+  ],
+  "target_product_file": "site/index.html",
+  "product_test_target": "tests/test_website_s3.py",
+  "allowed_write_prefixes": [
+    "site/"
+  ],
+  "max_correction_loops": 2,
+  "timeout_seconds": 180
+}

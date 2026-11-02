@@ -166,10 +166,12 @@ def test_project_configuration_and_task_assignment() -> None:
     assert cfg["product_repo_path"] == "../client-01-website"
     assert cfg["allowed_write_prefixes"] == ["site/"]
 
-    task, req_content = build_task_from_project_config("website-01")
+    task, req_content = build_task_from_project_config(
+        "website-01", task_id="NW-S3-001"
+    )
     assert isinstance(task, CustomerDeliveryTask)
     assert task.project_id == "website-01"
-    assert task.task_id in ("NW-S3-001", "NW-S4-001")
+    assert task.task_id == "NW-S3-001"
     assert task.target_product_file == "site/index.html"
     assert req_content["N-01"] == "Nordwerk Industrie-Service"
     assert req_content["N-08_href"] == "mailto:kontakt@nordwerk.example"
