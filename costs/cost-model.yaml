@@ -1,4 +1,4 @@
-# COURSE TEMPLATE – teams must review the assumptions during Session 1, Session 2 & Session 3.
+# COURSE TEMPLATE – teams must review the assumptions during Session 1, Session 2, Session 3 & Session 4.
 # Credits are intentionally abstract and are not euros.
 # Official course rates (do not change):
 human:
@@ -12,13 +12,13 @@ agent:
 
 ci:
   run_credits: 1.0
-  runs: 4
+  runs: 6
 
-session: 3
-date: 2026-10-26
+session: 4
+date: 2026-11-02
 
 # -----------------------------------------------------------------------------
-# Session 3–5 Customer Project 01 (Nordwerk Industrie-Service) Budget Plan (C3)
+# Session 3–5 Customer Project 01 (Nordwerk Industrie-Service) Budget Plan (C2, C3)
 # -----------------------------------------------------------------------------
 # Per Client Brief: delivery plan budget for S3/S4 is agreed and tracked
 # separately from Factory development, plus an explicit reserve for S5
@@ -50,7 +50,7 @@ customer_project_01_budget_plan:
   separate_factory_development_budget:
     justification: >
       Factory engineering (multi-repo sandboxing, bounded retry loops, handover schemas,
-      and Factory pytest suite) is accounted separately from customer delivery.
+      strict LLM validation, and Factory pytest suite) is accounted separately from customer delivery.
     s3_s5_factory_development_hours: 4.0
     planned_factory_development_credits: 400.0
 
@@ -65,7 +65,13 @@ human_effort:
     human_review_hours: 0.5            # 50.0 credits
     rework_hours: 0.25                 # 25.0 credits
     session_03_total_hours: 3.75       # 375.0 credits (175.0 customer delivery/review/rework + 200.0 Factory dev)
-  total_hours: 57.5
+  session_04_breakdown:
+    factory_development_hours: 1.25    # 125.0 credits (tracked separately from customer delivery)
+    customer_delivery_hours: 1.50      # 150.0 credits (yaw, saad, felix)
+    human_review_hours: 0.75           # 75.0 credits (saad, felix, yaw)
+    rework_hours: 0.25                 # 25.0 credits (muhammad, mirko)
+    session_04_total_hours: 3.75       # 375.0 credits (250.0 customer delivery/review/rework + 125.0 Factory dev)
+  total_hours: 61.25
 
 agent_runs:
   session_01:
@@ -249,6 +255,56 @@ agent_runs:
           - "run_product_test_tool"
         credits: 5.1814
 
+  session_04:
+    project_id: "website-01"
+    factory_commit: "54a626b18e0ce4a58142468a820e4626bd536de0"
+    product_release_candidate_commit: "ecb598140d0b2d0778d891f9bc1acc8c36295a93"
+    model: "qwen3:4b@359d7dd4bcda"
+    includes_fault_and_baseline_runs: true
+    workflows:
+      - workflow_id: "WF-WEBSITE01-S4-001"
+        customer_task_id: "NW-S4-001"
+        status: "approved_at_human_gate (Release Candidate R-BASE)"
+        run_ids:
+          - "4ef00a81-e855-4579-9859-7fbdd04b2523"
+          - "0f35bc7c-821c-4cfd-9d90-ab9591684325"
+          - "bfba74fa-46f0-49e1-8774-a37ff1572a54"
+        calls: 3
+        duration_seconds: 164.0698
+        recorded_input_tokens: 2013
+        recorded_output_tokens: 758
+        tools_used:
+          - "read_product_file_tool"
+          - "write_product_file_tool"
+          - "run_product_test_tool"
+        credits: 4.7113
+      - workflow_id: "WF-WEBSITE01-S4-FAULT-001"
+        customer_task_id: "NW-S4-FAULT-001"
+        status: "rejected_at_human_gate (escalate_to_human -> changes_requested)"
+        note: "Controlled fault injection (mailto:falsch@nordwerk.example) in isolated product checkout; detected by test_website_s4.py (exit_code=1) and blocked from approval."
+        run_ids:
+          - "0fbe16e7-b024-4961-9236-2994f59d146a"
+          - "a43868c9-baf2-4f2d-ab00-e04464d51b9c"
+          - "42e1029e-7b4e-4a0c-ae63-a5b0bb701d14"
+        calls: 3
+        duration_seconds: 258.2232
+        recorded_input_tokens: 2514
+        recorded_output_tokens: 829
+        credits: 5.6657
+      - workflow_id: "R-01-BASELINE-001"
+        customer_task_id: "R-01"
+        status: "approved_baseline_experiment (isolated R-BASE checkout)"
+        note: "Reference task R-01 ('Projektkoordination') executed on isolated R-BASE checkout using F-BASE; passed 4/4 checks in verify_r01_baseline.py with 0 regressions."
+        run_ids:
+          - "045a8e20-a2cb-4a9f-82f0-a804e7a7402d"
+          - "82c4af37-f492-4b72-9113-f006a5647d6c"
+          - "f70e15a7-e155-4fb0-8f55-4611646dd3b9"
+        calls: 3
+        duration_seconds: 234.1641
+        recorded_input_tokens: 2114
+        recorded_output_tokens: 819
+        credits: 5.4166
+
 credits_calculation:
   session_01_total_credits: 166.4369
   session_02_agent_credits: 41.8849
@@ -266,3 +322,16 @@ credits_calculation:
     human_factory_development_credits: 200.0                 # Accounted separately against 400.0 S3-S5 Factory dev budget
     session_03_ci_credits: 1.0
     session_03_grand_total_credits: 384.2900
+  session_04_breakdown:
+    agent_credits_release_candidate_run: 4.7113
+    agent_credits_controlled_fault_run: 5.6657
+    agent_credits_r01_baseline_run: 5.4166
+    session_04_total_agent_credits: 15.7936
+    human_customer_delivery_credits: 150.0
+    human_review_credits: 75.0
+    human_rework_credits: 25.0
+    session_04_ci_credits: 2.0
+    session_04_customer_delivery_subtotal_credits: 267.7936  # 250 human delivery/review/rework + 15.7936 agent + 2.0 CI
+    s3_s4_cumulative_customer_delivery_credits: 452.0836     # 71.65% of 631.0 S3/S4 delivery budget (178.9164 credits under budget)
+    human_factory_development_credits: 125.0                 # Cumulative S3+S4 Factory dev = 325.0 / 400.0 credits
+    session_04_grand_total_credits: 392.7936

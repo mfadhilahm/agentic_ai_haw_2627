@@ -1,0 +1,35 @@
+{
+  "task_id": "R-01",
+  "project_id": "website-01",
+  "workflow_id": "R-01-BASELINE-001",
+  "decision": "approved",
+  "reviewer": "muhammad",
+  "decided_at_utc": "2026-11-02T10:24:12.890745+00:00",
+  "tested_source_commit": "ecb598140d0b2d0778d891f9bc1acc8c36295a93",
+  "product_input_commit": "ecb598140d0b2d0778d891f9bc1acc8c36295a93",
+  "reviewed_artifact_hashes": {
+    "site/index.html": "0b05ef0b38da40af99b26c81783a5eab1f97d4012190fa98ac455d6f75a79720"
+  },
+  "report_path": "C:\\Hochschule\\Module\\Semester 5\\Agentic AI\\agentic_ai_haw_2627\\runs\\website-01\\R-01-BASELINE-001\\workflow-report.json",
+  "report_sha256": "7375b7415b111e15f3e06742f43331e49f81db4b76d259ea6a41505047f45226",
+  "test_evidence_paths": [
+    "C:\\Hochschule\\Module\\Semester 5\\Agentic AI\\agentic_ai_haw_2627\\runs\\website-01\\R-01-BASELINE-001\\trace.jsonl",
+    "C:\\Hochschule\\Module\\Semester 5\\Agentic AI\\agentic_ai_haw_2627\\runs\\website-01\\R-01-BASELINE-001\\manifest.json"
+  ],
+  "accepted_criteria": [
+    "AC-01",
+    "AC-02",
+    "AC-03",
+    "AC-04",
+    "AC-05",
+    "AC-06",
+    "AC-07",
+    "AC-08",
+    "R-01"
+  ],
+  "open_criteria": [
+    "Session 5 optimization comparison on R-01"
+  ],
+  "rationale": "R-01 baseline experiment passed all 4 checks in verify_r01_baseline.py (AC-01..AC-08 + Projektkoordination card) with 0 regressions on isolated R-BASE checkout.",
+  "identity_assurance": "self_declared_course_review"
+}

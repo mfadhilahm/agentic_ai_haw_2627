@@ -1,0 +1,41 @@
+{
+  "company": "HAW Agentic Software Factory",
+  "session": 4,
+  "project_id": "website-01",
+  "customer_task_id": "R-01",
+  "team_size": 6,
+  "factory_commit": "54a626b18e0ce4a58142468a820e4626bd536de0",
+  "factory_commit_clean": true,
+  "factory_dirty_files": [],
+  "workflow_code_sha256": "f2b9d3d00df0a1d4020175e7ee9af1d93aba1689c818eb9dc30af3da2fe89ecf",
+  "product_input_commit": "ecb598140d0b2d0778d891f9bc1acc8c36295a93",
+  "product_output_commit": "ecb598140d0b2d0778d891f9bc1acc8c36295a93",
+  "workflow_ids": [
+    "R-01-BASELINE-001"
+  ],
+  "run_ids": [
+    "045a8e20-a2cb-4a9f-82f0-a804e7a7402d",
+    "82c4af37-f492-4b72-9113-f006a5647d6c",
+    "f70e15a7-e155-4fb0-8f55-4611646dd3b9"
+  ],
+  "llm_provider": "ollama",
+  "llm_model": "qwen3:4b",
+  "model_tag_or_digest": "qwen3:4b@359d7dd4bcda",
+  "test_commands": [
+    "python -m pytest -q",
+    "python -m pytest tests/verify_r01_baseline.py -q (in C:\\Users\\Muham\\AppData\\Local\\Temp\\nordwerk_r01_a9mfbfb5\\client-01-website)"
+  ],
+  "product_test_passed": true,
+  "iterations_used": 1,
+  "max_correction_loops": 2,
+  "mock_runs_are_separate": false,
+  "review_file": "C:\\Hochschule\\Module\\Semester 5\\Agentic AI\\agentic_ai_haw_2627\\runs\\website-01\\R-01-BASELINE-001\\review.json",
+  "artifact_hashes": {
+    "site/index.html": "0b05ef0b38da40af99b26c81783a5eab1f97d4012190fa98ac455d6f75a79720"
+  },
+  "issue_and_pr_references": [
+    "C:\\Users\\Muham\\AppData\\Local\\Temp\\nordwerk_r01_a9mfbfb5\\client-01-website/docs/issue-02-session-04.md"
+  ],
+  "cost_records": "costs/usage.csv",
+  "total_estimated_agent_credits": 5.4166
+}

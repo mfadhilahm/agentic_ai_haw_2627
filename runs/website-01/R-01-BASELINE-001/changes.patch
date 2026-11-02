@@ -1,0 +1,13 @@
+--- a/site/index.html
++++ b/site/index.html
+@@ -51,6 +51,10 @@
+         <h3>Betriebsdokumentation</h3>
+         <p>Wir bringen technische Unterlagen in eine nachvollziehbare und nutzbare Struktur.</p>
+       </article>
++      <article class="service-card">
++        <h3>Projektkoordination</h3>
++        <p>Wir koordinieren klar abgegrenzte technische Vorhaben mit Ihrem Team.</p>
++      </article>
+       </div>
+     </section>
+     <section class="target-groups" id="zielgruppen" aria-labelledby="zielgruppen-heading">

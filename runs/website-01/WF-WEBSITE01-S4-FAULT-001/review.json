@@ -1,0 +1,32 @@
+{
+  "task_id": "NW-S4-FAULT-001",
+  "project_id": "website-01",
+  "workflow_id": "WF-WEBSITE01-S4-FAULT-001",
+  "decision": "changes_requested",
+  "reviewer": "felix",
+  "decided_at_utc": "2026-11-02T10:18:50.816181+00:00",
+  "tested_source_commit": "ecb598140d0b2d0778d891f9bc1acc8c36295a93",
+  "product_input_commit": "ecb598140d0b2d0778d891f9bc1acc8c36295a93",
+  "reviewed_artifact_hashes": {
+    "site/index.html": "61000bf18c1c4652b51ca87a012d14b3f5fb075d3cc5aa110eb90661f92e0c4d"
+  },
+  "report_path": "C:\\Hochschule\\Module\\Semester 5\\Agentic AI\\agentic_ai_haw_2627\\runs\\website-01\\WF-WEBSITE01-S4-FAULT-001\\workflow-report.json",
+  "report_sha256": "b0296b43606e6cef17e00fbc4fe72c2316290152a8b8c8ae0a04764688b0eda8",
+  "test_evidence_paths": [
+    "C:\\Hochschule\\Module\\Semester 5\\Agentic AI\\agentic_ai_haw_2627\\runs\\website-01\\WF-WEBSITE01-S4-FAULT-001\\trace.jsonl",
+    "C:\\Hochschule\\Module\\Semester 5\\Agentic AI\\agentic_ai_haw_2627\\runs\\website-01\\WF-WEBSITE01-S4-FAULT-001\\manifest.json"
+  ],
+  "accepted_criteria": [],
+  "open_criteria": [
+    "AC-01",
+    "AC-02",
+    "AC-03",
+    "AC-04",
+    "AC-05",
+    "AC-06",
+    "AC-07",
+    "AC-08"
+  ],
+  "rationale": "Blocked by quality gate: controlled fault mailto:falsch@nordwerk.example failed test_family2_contact_and_navigation_targets_ac04_ac05 (AC-04).",
+  "identity_assurance": "self_declared_course_review"
+}

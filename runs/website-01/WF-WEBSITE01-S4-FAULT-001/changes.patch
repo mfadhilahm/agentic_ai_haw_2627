@@ -1,0 +1,20 @@
+--- a/site/index.html
++++ b/site/index.html
+@@ -32,7 +32,7 @@
+       <h1 id="hero-heading">Nordwerk Industrie-Service</h1>
+       <p class="lead">Praktische Unterstützung für Ihren technischen Betrieb.</p>
+       <p class="hero-actions">
+-        <a class="cta-link" href="mailto:kontakt@nordwerk.example">Anfrage stellen</a>
++        <a class="cta-link" href="mailto:falsch@nordwerk.example">Anfrage stellen</a>
+       </p>
+     </section>
+ 
+@@ -70,7 +70,7 @@
+     <section class="contact" id="kontakt" aria-labelledby="kontakt-heading">
+       <h2 id="kontakt-heading">Kontakt</h2>
+       <p>Sie möchten unverbindlich Informationen anfordern? Kontaktieren Sie uns direkt per E-Mail:</p>
+-      <a class="cta-link" href="mailto:kontakt@nordwerk.example">Anfrage stellen</a>
++      <a class="cta-link" href="mailto:falsch@nordwerk.example">Anfrage stellen</a>
+     </section>
+   </main>
+ 

@@ -1,0 +1,34 @@
+{
+  "task_id": "NW-S4-001",
+  "project_id": "website-01",
+  "workflow_id": "WF-WEBSITE01-S4-001",
+  "decision": "approved",
+  "reviewer": "saad",
+  "decided_at_utc": "2026-11-02T10:14:13.257541+00:00",
+  "tested_source_commit": "ecb598140d0b2d0778d891f9bc1acc8c36295a93",
+  "product_input_commit": "473865222ef23e1348046b3b06af759b2182515f",
+  "reviewed_artifact_hashes": {
+    "site/index.html": "4a6a61db6f64d052957fe6d112955abf72374be4efb3d46c59a44d83a65cc3d3"
+  },
+  "report_path": "C:\\Hochschule\\Module\\Semester 5\\Agentic AI\\agentic_ai_haw_2627\\runs\\website-01\\WF-WEBSITE01-S4-001\\workflow-report.json",
+  "report_sha256": "7d344fdb38c84efc0a51d9d1bc761550216f65150fca0a613acae099fed5d28a",
+  "test_evidence_paths": [
+    "C:\\Hochschule\\Module\\Semester 5\\Agentic AI\\agentic_ai_haw_2627\\runs\\website-01\\WF-WEBSITE01-S4-001\\trace.jsonl",
+    "C:\\Hochschule\\Module\\Semester 5\\Agentic AI\\agentic_ai_haw_2627\\runs\\website-01\\WF-WEBSITE01-S4-001\\manifest.json"
+  ],
+  "accepted_criteria": [
+    "AC-01",
+    "AC-02",
+    "AC-03",
+    "AC-04",
+    "AC-05",
+    "AC-06",
+    "AC-07",
+    "AC-08"
+  ],
+  "open_criteria": [
+    "AC-09, AC-10 due in Session 5"
+  ],
+  "rationale": "Verified AC-01..AC-08: all 3 automated check families passed (7/7), responsive layout verified at 375px and 1280px with zero horizontal overflow, and keyboard Tab focus ring verified across all navigation and mailto links.",
+  "identity_assurance": "self_declared_course_review"
+}
