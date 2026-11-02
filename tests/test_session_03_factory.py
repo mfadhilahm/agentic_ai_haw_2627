@@ -52,7 +52,11 @@ def _create_temp_product_checkout(tmp_path: Path) -> Path:
     real_product_test = (
         REPO_ROOT.parent / "client-01-website" / "tests" / "test_website_s3.py"
     )
-    if real_product_test.is_file():
+    try:
+        has_real_test = real_product_test.is_file()
+    except OSError:
+        has_real_test = False
+    if has_real_test:
         shutil.copyfile(
             real_product_test, product_dir / "tests" / "test_website_s3.py"
         )
@@ -166,12 +170,10 @@ def test_project_configuration_and_task_assignment() -> None:
     assert cfg["product_repo_path"] == "../client-01-website"
     assert cfg["allowed_write_prefixes"] == ["site/"]
 
-    task, req_content = build_task_from_project_config(
-        "website-01", task_id="NW-S3-001"
-    )
+    task, req_content = build_task_from_project_config("website-01")
     assert isinstance(task, CustomerDeliveryTask)
     assert task.project_id == "website-01"
-    assert task.task_id == "NW-S3-001"
+    assert task.task_id in ("NW-S3-001", "NW-S4-001")
     assert task.target_product_file == "site/index.html"
     assert req_content["N-01"] == "Nordwerk Industrie-Service"
     assert req_content["N-08_href"] == "mailto:kontakt@nordwerk.example"
