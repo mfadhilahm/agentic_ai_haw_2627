@@ -1,0 +1,35 @@
+{
+  "task_id": "R-01",
+  "project_id": "website-01",
+  "workflow_id": "R-01-FNEW-002",
+  "decision": "approved",
+  "reviewer": "felix",
+  "decided_at_utc": "2026-11-09T10:20:08.679566+00:00",
+  "tested_source_commit": "uncommitted_worktree",
+  "product_input_commit": "ecb598140d0b2d0778d891f9bc1acc8c36295a93",
+  "product_worktree_state": "uncommitted_worktree",
+  "subsequent_product_commit": null,
+  "reviewed_artifact_hashes": {
+    "site/index.html": "0b05ef0b38da40af99b26c81783a5eab1f97d4012190fa98ac455d6f75a79720"
+  },
+  "report_path": "runs/website-01/R-01-FNEW-002/workflow-report.json",
+  "report_sha256": "ae9c76a25902981b160cace0d13aa22c8c82d4c5e67bac4b74ddcfd1e9efbc2b",
+  "test_evidence_paths": [
+    "runs/website-01/R-01-FNEW-002/trace.jsonl",
+    "runs/website-01/R-01-FNEW-002/manifest.json"
+  ],
+  "accepted_criteria": [
+    "AC-01",
+    "AC-02",
+    "AC-03",
+    "AC-04",
+    "AC-05",
+    "AC-06",
+    "AC-07",
+    "AC-08",
+    "R-01"
+  ],
+  "open_criteria": [],
+  "rationale": "Second confirmation run (n=2) of F-NEW on R-01 reproduced identical SHA-256 0b05ef0b... in 3.86s implementation time (104 output tokens, 3.1678 total credits).",
+  "identity_assurance": "self_declared_course_review"
+}

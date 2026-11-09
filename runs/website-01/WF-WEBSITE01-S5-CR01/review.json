@@ -1,0 +1,39 @@
+{
+  "task_id": "NW-S5-CR01",
+  "project_id": "website-01",
+  "workflow_id": "WF-WEBSITE01-S5-CR01",
+  "decision": "approved",
+  "reviewer": "saad",
+  "decided_at_utc": "2026-11-09T10:20:08.681574+00:00",
+  "tested_source_commit": "84d5baf9fcfebd9b1c4772e63fcd6b92d70fc53f",
+  "product_input_commit": "c3866e164d89a19bc83557058318319765b339b3",
+  "product_worktree_state": "committed_after_review",
+  "subsequent_product_commit": "84d5baf9fcfebd9b1c4772e63fcd6b92d70fc53f",
+  "reviewed_artifact_hashes": {
+    "site/index.html": "6ebd91ed30ef6b1d200103d827af3ad768ff3c1ad08c7736e1992c6a8a73d721",
+    "site/en.html": "8b43eaa3e36e915b959c944f3a5445de5cd2aaf165b52d21c99ca920edd527b8"
+  },
+  "report_path": "runs/website-01/WF-WEBSITE01-S5-CR01/workflow-report.json",
+  "report_sha256": "9e6b5a61fc9206f5c184bb728b036bd2d383c07e91f535ad5d99484bc7365c39",
+  "test_evidence_paths": [
+    "runs/website-01/WF-WEBSITE01-S5-CR01/trace.jsonl",
+    "runs/website-01/WF-WEBSITE01-S5-CR01/manifest.json"
+  ],
+  "accepted_criteria": [
+    "AC-01",
+    "AC-02",
+    "AC-03",
+    "AC-04",
+    "AC-05",
+    "AC-06",
+    "AC-07",
+    "AC-08",
+    "AC-09",
+    "AC-10"
+  ],
+  "open_criteria": [
+    "Final customer acceptance by instructor in Session 5 live review (pending_customer_acceptance)"
+  ],
+  "rationale": "Technical release approval for Session 5 CR-01 (site/index.html + site/en.html committed as 84d5baf / R-S5-FINAL). Iteration 1 caught missing delta keys without fallback; Iteration 2 self-corrected and passed all 10 unit/regression tests and 375px/1280px browser & keyboard review. Customer acceptance remains pending live review.",
+  "identity_assurance": "self_declared_course_review"
+}

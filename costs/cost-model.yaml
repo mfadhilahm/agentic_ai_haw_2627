@@ -12,10 +12,10 @@ agent:
 
 ci:
   run_credits: 1.0
-  runs: 8
+  runs: 10
 
-session: 4
-date: 2026-11-02
+session: 5
+date: 2026-11-09
 
 # -----------------------------------------------------------------------------
 # Session 3–5 Customer Project 01 (Nordwerk Industrie-Service) Budget Plan (C2, C3)
@@ -71,7 +71,7 @@ human_effort:
     human_review_hours: 0.75           # 75.0 credits (saad, felix, yaw)
     rework_hours: 0.25                 # 25.0 credits (muhammad, mirko)
     session_04_total_hours: 3.75       # 375.0 credits (250.0 customer delivery/review/rework + 125.0 Factory dev)
-  total_hours: 61.25
+  total_hours: 64.50
 
 agent_runs:
   session_01:
@@ -335,3 +335,28 @@ credits_calculation:
     s3_s4_cumulative_customer_delivery_credits: 454.0836     # 71.96% of 631.0 S3/S4 delivery budget (176.9164 credits under budget)
     human_factory_development_credits: 125.0                 # Cumulative S3+S4 Factory dev = 325.0 / 400.0 credits
     session_04_grand_total_credits: 394.7936
+  session_05_breakdown:
+    factory_commit_f_new: "5f3b49e215f1b9e60c487c7015d26e7c68372107"
+    product_release_commit: "84d5baf9fcfebd9b1c4772e63fcd6b92d70fc53f"
+    agent_credits_r01_fnew_001: 3.6962
+    agent_credits_r01_fnew_002: 3.1678
+    agent_credits_cr01_delivery_run: 5.4110
+    session_05_total_agent_credits: 12.2750
+    human_customer_delivery_credits: 125.0
+    human_security_advisory_sr01_credits: 75.0
+    human_review_credits: 50.0
+    session_05_ci_credits: 2.0
+    session_05_customer_and_reserve_subtotal_credits: 264.2750  # 250.0 human + 12.2750 agent + 2.0 CI vs 315.0 S5 reserve budget (50.7250 under reserve)
+    human_factory_development_credits: 75.0                     # Cumulative S3+S4+S5 Factory dev = 400.0 / 400.0 credits
+    session_05_grand_total_credits: 339.2750
+  s3_s5_overall_project_balance:
+    planned_s3_s4_delivery_budget_credits: 631.0
+    planned_s5_reserve_budget_credits: 315.0
+    planned_s3_s5_customer_total_budget_credits: 946.0
+    actual_s3_customer_delivery_credits: 184.2900
+    actual_s4_customer_delivery_credits: 269.7936
+    actual_s5_customer_and_reserve_credits: 264.2750
+    actual_s3_s5_customer_total_credits: 718.3586               # 75.94% of 946.0 customer budget (227.6414 credits under budget)
+    planned_s3_s5_factory_development_credits: 400.0
+    actual_s3_s5_factory_development_credits: 400.0             # 200.0 (S3) + 125.0 (S4) + 75.0 (S5)
+    actual_s3_s5_combined_total_credits: 1118.3586

@@ -1,0 +1,43 @@
+{
+  "company": "HAW Agentic Software Factory",
+  "session": 5,
+  "project_id": "website-01",
+  "customer_task_id": "R-01",
+  "team_size": 6,
+  "factory_commit": "5f3b49e215f1b9e60c487c7015d26e7c68372107",
+  "factory_commit_clean": true,
+  "factory_dirty_files": [],
+  "workflow_code_sha256": "b5df5d710251e0bfdb35af8a8b14fcd4e791f99d2c62aecc803f3c310ca2a883",
+  "product_input_commit": "ecb598140d0b2d0778d891f9bc1acc8c36295a93",
+  "product_worktree_state": "uncommitted_worktree",
+  "product_output_commit": "uncommitted_worktree",
+  "subsequent_product_commit": null,
+  "workflow_ids": [
+    "R-01-FNEW-001"
+  ],
+  "run_ids": [
+    "e11c9b1e-d554-49fb-a3cd-b9d99ac9426e",
+    "1783e298-f87c-46b4-8fd8-d7b39d022249",
+    "df1756fc-945b-4abf-bb41-f4ec7daa3e1f"
+  ],
+  "llm_provider": "ollama",
+  "llm_model": "qwen3:4b",
+  "model_tag_or_digest": "qwen3:4b@359d7dd4bcda",
+  "test_commands": [
+    "python -m pytest -q",
+    "python -m pytest tests/verify_r01_baseline.py -q (in ../client-01-website)"
+  ],
+  "product_test_passed": true,
+  "iterations_used": 1,
+  "max_correction_loops": 2,
+  "mock_runs_are_separate": false,
+  "review_file": "runs/website-01/R-01-FNEW-001/review.json",
+  "artifact_hashes": {
+    "site/index.html": "0b05ef0b38da40af99b26c81783a5eab1f97d4012190fa98ac455d6f75a79720"
+  },
+  "issue_and_pr_references": [
+    "https://github.com/mfadhilahm/client-01-website/blob/ecb598140d0b2d0778d891f9bc1acc8c36295a93/docs/issue-02-session-04.md"
+  ],
+  "cost_records": "costs/usage.csv",
+  "total_estimated_agent_credits": 3.6962
+}

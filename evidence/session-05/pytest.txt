@@ -1,0 +1,23 @@
+============================= test session starts =============================
+platform win32 -- Python 3.12.10, pytest-9.1.1, pluggy-1.6.0 -- .venv\Scripts\python.exe
+cachedir: .pytest_cache
+rootdir: .
+configfile: pytest.ini
+plugins: anyio-4.15.1, langsmith-0.14.7
+collecting ... collected 12 items
+
+tests/test_session_03_factory.py::test_project_configuration_and_task_assignment PASSED [  8%]
+tests/test_session_03_factory.py::test_product_workspace_sandbox_enforces_allowed_boundaries PASSED [ 16%]
+tests/test_session_03_factory.py::test_structured_handover_and_end_to_end_delivery_workflow PASSED [ 25%]
+tests/test_session_03_factory.py::test_bounded_correction_loop_recovers_and_escalates_when_exhausted PASSED [ 33%]
+tests/test_session_04_factory.py::test_failed_or_unparseable_llm_call_never_masked_by_default_html PASSED [ 41%]
+tests/test_session_04_factory.py::test_factory_commit_clean_check_blocks_dirty_runs_and_records_code_hash PASSED [ 50%]
+tests/test_session_04_factory.py::test_session_04_controlled_fault_blocks_gate_and_corrected_candidate_passes PASSED [ 58%]
+tests/test_session_04_factory.py::test_r01_baseline_task_configuration_and_4_service_rendering PASSED [ 66%]
+tests/test_session_04_factory.py::test_session_04_feedback_usage_csv_and_worktree_commit_distinction PASSED [ 75%]
+tests/test_session_05_factory.py::test_fnew_delta_key_extraction_and_r01_delta_merge PASSED [ 83%]
+tests/test_session_05_factory.py::test_fnew_deterministic_pre_gate_validator_catches_faults PASSED [ 91%]
+tests/test_session_05_factory.py::test_session_05_cr01_bilingual_delivery_and_missing_delta_rejection PASSED [100%]
+
+- generated xml file: evidence\session-05\pytest.xml -
+============================= 12 passed in 29.84s =============================
