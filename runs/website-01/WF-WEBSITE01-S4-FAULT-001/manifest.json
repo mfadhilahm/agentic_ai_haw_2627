@@ -9,7 +9,7 @@
   "factory_dirty_files": [],
   "workflow_code_sha256": "f2b9d3d00df0a1d4020175e7ee9af1d93aba1689c818eb9dc30af3da2fe89ecf",
   "product_input_commit": "ecb598140d0b2d0778d891f9bc1acc8c36295a93",
-  "product_output_commit": "ecb598140d0b2d0778d891f9bc1acc8c36295a93",
+  "product_output_commit": "uncommitted_worktree",
   "workflow_ids": [
     "WF-WEBSITE01-S4-FAULT-001"
   ],
@@ -23,19 +23,21 @@
   "model_tag_or_digest": "qwen3:4b@359d7dd4bcda",
   "test_commands": [
     "python -m pytest -q",
-    "python -m pytest tests/test_website_s4.py -q (in C:\\Users\\Muham\\AppData\\Local\\Temp\\nordwerk_fault_qlkmoxbp\\client-01-website)"
+    "python -m pytest tests/test_website_s4.py -q (in isolated checkout of R-BASE ecb5981)"
   ],
   "product_test_passed": false,
   "iterations_used": 1,
   "max_correction_loops": 1,
   "mock_runs_are_separate": false,
-  "review_file": "C:\\Hochschule\\Module\\Semester 5\\Agentic AI\\agentic_ai_haw_2627\\runs\\website-01\\WF-WEBSITE01-S4-FAULT-001\\review.json",
+  "review_file": "runs/website-01/WF-WEBSITE01-S4-FAULT-001/review.json",
   "artifact_hashes": {
     "site/index.html": "61000bf18c1c4652b51ca87a012d14b3f5fb075d3cc5aa110eb90661f92e0c4d"
   },
   "issue_and_pr_references": [
-    "C:\\Users\\Muham\\AppData\\Local\\Temp\\nordwerk_fault_qlkmoxbp\\client-01-website/docs/issue-02-session-04.md"
+    "https://github.com/mfadhilahm/client-01-website/blob/ecb598140d0b2d0778d891f9bc1acc8c36295a93/docs/issue-02-session-04.md"
   ],
   "cost_records": "costs/usage.csv",
-  "total_estimated_agent_credits": 5.6657
+  "total_estimated_agent_credits": 5.6657,
+  "product_worktree_state": "uncommitted_worktree (rejected_not_committed)",
+  "subsequent_product_commit": null
 }

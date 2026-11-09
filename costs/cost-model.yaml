@@ -12,7 +12,7 @@ agent:
 
 ci:
   run_credits: 1.0
-  runs: 6
+  runs: 8
 
 session: 4
 date: 2026-11-02
@@ -330,8 +330,8 @@ credits_calculation:
     human_customer_delivery_credits: 150.0
     human_review_credits: 75.0
     human_rework_credits: 25.0
-    session_04_ci_credits: 2.0
-    session_04_customer_delivery_subtotal_credits: 267.7936  # 250 human delivery/review/rework + 15.7936 agent + 2.0 CI
-    s3_s4_cumulative_customer_delivery_credits: 452.0836     # 71.65% of 631.0 S3/S4 delivery budget (178.9164 credits under budget)
+    session_04_ci_credits: 4.0                               # All 4 GitHub Actions CI runs on 2026-11-02 (commits 46ed1f9, 6393ebf, 54a626b, a03d3be)
+    session_04_customer_delivery_subtotal_credits: 269.7936  # 250 human delivery/review/rework + 15.7936 agent + 4.0 CI
+    s3_s4_cumulative_customer_delivery_credits: 454.0836     # 71.96% of 631.0 S3/S4 delivery budget (176.9164 credits under budget)
     human_factory_development_credits: 125.0                 # Cumulative S3+S4 Factory dev = 325.0 / 400.0 credits
-    session_04_grand_total_credits: 392.7936
+    session_04_grand_total_credits: 394.7936

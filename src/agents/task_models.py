@@ -77,6 +77,8 @@ class CustomerDeliveryTask(EngineeringTask):
     allowed_write_prefixes: list[str] = Field(default_factory=lambda: ["site/"])
     acceptance_criteria: list[str] = Field(default_factory=list)
     required_content: dict[str, str] = Field(default_factory=dict)
+    delta_keys: list[str] = Field(default_factory=list)
+    baseline_content: dict[str, str] = Field(default_factory=dict)
     max_correction_loops: int = Field(default=2, ge=1, le=5)
     timeout_seconds: int = Field(default=180, ge=1, le=300)
 
@@ -96,6 +98,8 @@ class ProductHandoverPayload(BaseModel):
         default_factory=lambda: ["AC-01", "AC-02 (N-03)", "AC-04"]
     )
     required_content: dict[str, str] = Field(default_factory=dict)
+    delta_keys: list[str] = Field(default_factory=list)
+    baseline_content: dict[str, str] = Field(default_factory=dict)
     architecture_decisions: list[str] = Field(default_factory=list)
     ready_for_implementation: bool = True
 
@@ -117,6 +121,8 @@ class QAHandoverPayload(BaseModel):
         default_factory=lambda: ["AC-01", "AC-02 (N-03)", "AC-04"]
     )
     iteration: int = 1
+    pre_gate_validation_passed: bool = True
+    pre_gate_findings: list[str] = Field(default_factory=list)
     ready_for_qa: bool = True
 
 

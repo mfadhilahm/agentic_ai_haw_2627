@@ -1,8 +1,9 @@
-"""Session 3 & 4 Customer Delivery Workflow:
+"""Session 3, 4 & 5 Customer Delivery Workflow:
 Multi-agent cooperation (Architect -> Implementation -> QA) on an external product checkout
 with workspace sandboxing, strict LLM output validation (no silent HTML fallback),
-verified clean Factory commit tracking, bounded correction loops, run manifests,
-and a human review gate.
+delta-key merging on verified product baselines (F-NEW), deterministic pre-gate HTML/anchor
+validation (F-NEW), verified clean Factory commit tracking, bounded correction loops,
+run manifests, and a human review gate.
 """
 from __future__ import annotations
 
@@ -10,6 +11,7 @@ import argparse
 import difflib
 import hashlib
 import json
+import re
 import subprocess
 import sys
 import time
@@ -82,6 +84,34 @@ SESSION_04_REQUIRED_CONTENT: dict[str, str] = {
     ),
 }
 
+SESSION_05_CR01_DELTA_CONTENT: dict[str, str] = {
+    "N-06_group_3": "Technische Einkaufsabteilungen",
+    "EN_title": "Nordwerk Industrie-Service",
+    "EN_main_statement": "Practical support for your technical operations.",
+    "EN_service_1": "Maintenance planning",
+    "EN_service_2": "Spare parts coordination",
+    "EN_service_3": "Operational documentation",
+    "EN_target_group": "Technical purchasing departments",
+    "EN_contact_label": "Request information",
+    "EN_contact_href": "mailto:kontakt@nordwerk.example",
+    "EN_notice": (
+        "Fictional company – HAW Hamburg course project. "
+        "No real offers or contact."
+    ),
+}
+
+SESSION_05_CR01_REQUIRED_CONTENT: dict[str, str] = {
+    **SESSION_04_REQUIRED_CONTENT,
+    **SESSION_05_CR01_DELTA_CONTENT,
+}
+
+FORBIDDEN_UNVERIFIED_CLAIMS: tuple[str, ...] = (
+    "ISO 9001",
+    "TÜV",
+    "24/7",
+    "TODO_FACTORY_GENERATION",
+)
+
 
 class ArchitectPlanResult(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -133,7 +163,9 @@ class CustomerDeliveryWorkflowResult(BaseModel):
     factory_dirty_files: list[str] = Field(default_factory=list)
     workflow_code_sha256: str = ""
     product_input_commit: str
+    product_worktree_state: str = "uncommitted_worktree"
     product_output_commit: str
+    subsequent_product_commit: str | None = None
     iterations_used: int
     max_correction_loops: int
     architect_result: ArchitectPlanResult
@@ -164,6 +196,8 @@ class CustomerHumanReviewRecord(BaseModel):
     decided_at_utc: str
     tested_source_commit: str
     product_input_commit: str
+    product_worktree_state: str = "uncommitted_worktree"
+    subsequent_product_commit: str | None = None
     reviewed_artifact_hashes: dict[str, str]
     report_path: str
     report_sha256: str = Field(pattern=r"^[a-f0-9]{64}$")
@@ -222,16 +256,42 @@ def build_task_from_project_config(
             {str(k): str(v) for k, v in cfg["required_content"].items()}
         )
 
-    resolved_task_id = task_id or str(cfg.get("customer_task_id", "NW-S4-001"))
+    resolved_task_id = task_id or str(cfg.get("customer_task_id", "NW-S5-CR01"))
     description = (
-        f"Deliver Nordwerk Industrie-Service website release candidate ({resolved_task_id}) "
+        f"Deliver Nordwerk Industrie-Service website release ({resolved_task_id}) "
         "in the customer repository."
     )
     product_test_target = str(
         cfg.get("product_test_target", "tests/test_website_s3.py")
     )
+    input_files = list(
+        cfg.get(
+            "product_input_files",
+            ["docs/issue-01-session-03.md", "site/index.html"],
+        )
+    )
 
-    # Support R-01 reference baseline task directly from configuration (C1 / L4.4)
+    # Support Session 5 CR-01 customer change task from configuration (A2, B1..B3, L5.1)
+    cr01_cfg = cfg.get("cr01_change_task")
+    if isinstance(cr01_cfg, dict) and (
+        resolved_task_id.upper().startswith("NW-S5")
+        or resolved_task_id.upper().startswith("CR-01")
+    ):
+        if isinstance(cr01_cfg.get("description"), str) and cr01_cfg["description"].strip():
+            description = cr01_cfg["description"].strip()
+        if isinstance(cr01_cfg.get("additional_required_content"), dict):
+            req_content.update(
+                {
+                    str(k): str(v)
+                    for k, v in cr01_cfg["additional_required_content"].items()
+                }
+            )
+        if isinstance(cr01_cfg.get("product_test_target"), str):
+            product_test_target = cr01_cfg["product_test_target"]
+        if isinstance(cr01_cfg.get("product_input_files"), list):
+            input_files = [str(x) for x in cr01_cfg["product_input_files"]]
+
+    # Support R-01 reference baseline task directly from configuration (C1 / L4.4 / L5.2)
     r01_cfg = cfg.get("r01_reference_task")
     if (
         isinstance(r01_cfg, dict)
@@ -248,6 +308,8 @@ def build_task_from_project_config(
             )
         if isinstance(r01_cfg.get("product_test_target"), str):
             product_test_target = r01_cfg["product_test_target"]
+        if isinstance(r01_cfg.get("product_input_files"), list):
+            input_files = [str(x) for x in r01_cfg["product_input_files"]]
 
     task = CustomerDeliveryTask(
         task_id=resolved_task_id,
@@ -256,12 +318,7 @@ def build_task_from_project_config(
         project_id=str(cfg.get("project_id", project_id)),
         product_repo_path=product_repo_path
         or str(cfg.get("product_repo_path", "../client-01-website")),
-        input_files=list(
-            cfg.get(
-                "product_input_files",
-                ["docs/issue-01-session-03.md", "site/index.html"],
-            )
-        ),
+        input_files=input_files,
         target_product_file=str(cfg.get("target_product_file", "site/index.html")),
         product_test_target=product_test_target,
         allowed_write_prefixes=list(cfg.get("allowed_write_prefixes", ["site/"])),
@@ -270,6 +327,74 @@ def build_task_from_project_config(
         else int(cfg.get("max_correction_loops", 2)),
     )
     return task, req_content
+
+
+def extract_verified_baseline_from_product_html(html_text: str) -> dict[str, str]:
+    """F-NEW improvement #1: Inspect existing product HTML and extract verified R-BASE strings.
+
+    Returns a copy of SESSION_04_REQUIRED_CONTENT only if all 14 verified baseline strings
+    are already present verbatim in the product's existing site/index.html. Never returns
+    defaults when the product checkout is an empty/placeholder template.
+    """
+    if not isinstance(html_text, str) or not html_text.strip():
+        return {}
+    if "TODO_FACTORY_GENERATION" in html_text:
+        return {}
+    for _, required_str in SESSION_04_REQUIRED_CONTENT.items():
+        if required_str not in html_text:
+            return {}
+    return dict(SESSION_04_REQUIRED_CONTENT)
+
+
+def validate_rendered_html_pre_gate(
+    de_html: str,
+    required_content: dict[str, str],
+    en_html: str | None = None,
+) -> list[str]:
+    """F-NEW improvement #2: Deterministic in-memory pre-gate HTML & anchor validator.
+
+    Verifies inside implementation_node before QA handover that:
+    1. Every required verbatim string in required_content is present in the rendered HTML.
+    2. All internal href="#..." anchor links resolve to existing id="..." attributes.
+    3. No <form> tag or forbidden unverified claims (ISO 9001, TÜV, 24/7) exist.
+    """
+    findings: list[str] = []
+    if not isinstance(de_html, str) or not de_html.strip():
+        return ["Rendered site/index.html is empty."]
+
+    for key, expected_text in required_content.items():
+        if not expected_text:
+            continue
+        if expected_text not in de_html:
+            findings.append(
+                f"Missing required verbatim content for '{key}' in site/index.html: {expected_text!r}"
+            )
+        if key.startswith("EN_") and en_html is not None and expected_text not in en_html:
+            findings.append(
+                f"Missing required English content for '{key}' in site/en.html: {expected_text!r}"
+            )
+
+    docs_to_check: list[tuple[str, str]] = [("site/index.html", de_html)]
+    if en_html is not None:
+        docs_to_check.append(("site/en.html", en_html))
+
+    for doc_name, html_doc in docs_to_check:
+        defined_ids = set(re.findall(r'id="([^"]+)"', html_doc))
+        anchor_targets = re.findall(r'href="#([^"]+)"', html_doc)
+        for target_id in anchor_targets:
+            if target_id not in defined_ids:
+                findings.append(
+                    f"Broken internal anchor href='#{target_id}' in {doc_name} (no matching id='{target_id}')"
+                )
+        if "<form" in html_doc.lower():
+            findings.append(f"Forbidden <form> element detected in {doc_name}")
+        for forbidden in FORBIDDEN_UNVERIFIED_CLAIMS:
+            if forbidden in html_doc:
+                findings.append(
+                    f"Forbidden unverified claim or placeholder '{forbidden}' detected in {doc_name}"
+                )
+
+    return findings
 
 
 def resolve_product_repo_root(product_repo_path: str | Path) -> Path:
@@ -399,6 +524,14 @@ def run_product_test_tool(
         part.strip() for part in (stdout, stderr) if part and part.strip()
     )
     return process.returncode, redact(output)[-6000:]
+
+
+def _portable_path(p: Path) -> str:
+    """Return a repository-relative POSIX path when inside REPO_ROOT, else str(p)."""
+    try:
+        return p.resolve().relative_to(REPO_ROOT.resolve()).as_posix()
+    except ValueError:
+        return str(p)
 
 
 def _git_head_commit(repo_dir: Path) -> str:
@@ -618,12 +751,56 @@ def _validate_and_normalize_implementation_fields(
         for g in raw_groups:
             if isinstance(g, str) and g.strip():
                 target_groups.append(g.strip())
-    for g_key in ("N-06_group_1", "target_group_1", "N-06_group_2", "target_group_2"):
+    for g_key in (
+        "N-06_group_1",
+        "target_group_1",
+        "N-06_group_2",
+        "target_group_2",
+        "N-06_group_3",
+        "target_group_3",
+    ):
         g_val = _clean_str((g_key,))
         if g_val and g_val not in target_groups:
             target_groups.append(g_val)
 
     working_approach = _clean_str(("working_approach", "N-07"))
+
+    en_title = _clean_str(("EN_title", "en_title"))
+    en_main_statement = _clean_str(("EN_main_statement", "en_main_statement"))
+    en_service_1 = _clean_str(("EN_service_1", "en_service_1"))
+    en_service_2 = _clean_str(("EN_service_2", "en_service_2"))
+    en_service_3 = _clean_str(("EN_service_3", "en_service_3"))
+    en_target_group = _clean_str(("EN_target_group", "en_target_group"))
+    en_contact_label = _clean_str(("EN_contact_label", "en_contact_label"))
+    en_contact_href = _clean_str(("EN_contact_href", "en_contact_href"))
+    en_notice = _clean_str(("EN_notice", "en_notice"))
+
+    english_view: dict[str, Any] | None = None
+    if any(
+        (
+            en_title,
+            en_main_statement,
+            en_service_1,
+            en_service_2,
+            en_service_3,
+            en_target_group,
+            en_contact_label,
+            en_contact_href,
+            en_notice,
+        )
+    ):
+        en_services = [
+            s for s in (en_service_1, en_service_2, en_service_3) if s
+        ]
+        english_view = {
+            "title": en_title or company_name,
+            "main_statement": en_main_statement,
+            "services": en_services,
+            "target_group": en_target_group,
+            "contact_label": en_contact_label,
+            "contact_href": en_contact_href or contact_href,
+            "notice": en_notice,
+        }
 
     missing: list[str] = []
     if not company_name:
@@ -654,6 +831,7 @@ def _validate_and_normalize_implementation_fields(
         "contact_label": contact_label,
         "contact_href": contact_href,
         "course_notice": course_notice,
+        "english_view": english_view,
     }
 
 
@@ -674,6 +852,7 @@ def _render_html_document(fields: dict[str, Any]) -> str:
     contact_label = normalized["contact_label"]
     contact_href = normalized["contact_href"]
     course_notice = normalized["course_notice"]
+    english_view: dict[str, Any] | None = normalized.get("english_view")
 
     nav_items = ['<li><a href="#leistungen">Leistungen</a></li>']
     if target_groups:
@@ -681,6 +860,11 @@ def _render_html_document(fields: dict[str, Any]) -> str:
     if working_approach:
         nav_items.append('<li><a href="#arbeitsweise">Arbeitsweise</a></li>')
     nav_items.append('<li><a href="#kontakt">Kontakt</a></li>')
+    if english_view:
+        nav_items.append('<li><a href="#en" lang="en">EN</a></li>')
+        nav_items.append(
+            '<li><a class="lang-switch" href="en.html" lang="en" hreflang="en">English (EN)</a></li>'
+        )
     nav_list_html = "\n        ".join(nav_items)
 
     service_cards_html = "\n".join(
@@ -713,6 +897,40 @@ def _render_html_document(fields: dict[str, Any]) -> str:
     <section class="working-approach" id="arbeitsweise" aria-labelledby="arbeitsweise-heading">
       <h2 id="arbeitsweise-heading">Unsere Arbeitsweise</h2>
       <p class="approach-statement">{working_approach}</p>
+    </section>
+"""
+
+    english_section = ""
+    if english_view:
+        en_title = english_view["title"]
+        en_main = english_view["main_statement"]
+        en_services: list[str] = english_view["services"]
+        en_target_group = english_view["target_group"]
+        en_contact_label = english_view["contact_label"]
+        en_contact_href = english_view["contact_href"]
+        en_notice = english_view["notice"]
+        en_services_li = "\n".join(
+            f'        <li class="en-service-item">{srv}</li>'
+            for srv in en_services
+        )
+        english_section = f"""
+    <section class="english-view" id="en" lang="en" aria-labelledby="en-heading">
+      <div class="en-header-row">
+        <h2 id="en-heading">{en_title} – English Overview</h2>
+        <a class="lang-switch" href="en.html" hreflang="en">English entry page (en.html)</a>
+      </div>
+      <p class="lead">{en_main}</p>
+      <h3>Services Overview</h3>
+      <ul class="target-group-list">
+{en_services_li}
+      </ul>
+      <h3>International &amp; Technical Purchasing</h3>
+      <p>We support small manufacturing companies, technical service providers, and <strong>{en_target_group}</strong>.</p>
+      <p class="hero-actions">
+        <a class="cta-link" href="{en_contact_href}">{en_contact_label}</a>
+        <a class="lang-switch" href="#start" lang="de">Deutsch (DE)</a>
+      </p>
+      <p class="en-notice" role="note">{en_notice}</p>
     </section>
 """
 
@@ -756,7 +974,7 @@ def _render_html_document(fields: dict[str, Any]) -> str:
       <div class="service-grid">
 {service_cards_html}
       </div>
-    </section>{target_groups_section}{working_approach_section}
+    </section>{target_groups_section}{working_approach_section}{english_section}
     <section class="contact" id="kontakt" aria-labelledby="kontakt-heading">
       <h2 id="kontakt-heading">Kontakt</h2>
       <p>Sie möchten unverbindlich Informationen anfordern? Kontaktieren Sie uns direkt per E-Mail:</p>
@@ -767,6 +985,133 @@ def _render_html_document(fields: dict[str, Any]) -> str:
   <footer class="site-footer">
     <div class="container">
       <p>&copy; 2026 {company_name} · Hamburg</p>
+    </div>
+  </footer>
+</body>
+</html>
+"""
+
+
+def _render_english_html_document(fields: dict[str, Any]) -> str:
+    """Render standalone English entry page (site/en.html) for Session 5 CR-01 (AC-09)."""
+    normalized = _validate_and_normalize_implementation_fields(fields)
+    english_view = normalized.get("english_view")
+    if not isinstance(english_view, dict):
+        raise ValueError("Cannot render site/en.html without validated English view fields")
+
+    en_title = english_view["title"]
+    en_main = english_view["main_statement"]
+    en_services: list[str] = english_view["services"]
+    en_target_group = english_view["target_group"]
+    en_contact_label = english_view["contact_label"]
+    en_contact_href = english_view["contact_href"]
+    en_notice = english_view["notice"]
+
+    missing_en: list[str] = []
+    if not en_title:
+        missing_en.append("EN_title")
+    if not en_main:
+        missing_en.append("EN_main_statement")
+    if len(en_services) < 3:
+        missing_en.append("EN_service_1..EN_service_3")
+    if not en_target_group:
+        missing_en.append("EN_target_group")
+    if not en_contact_label:
+        missing_en.append("EN_contact_label")
+    if not en_contact_href:
+        missing_en.append("EN_contact_href")
+    if not en_notice:
+        missing_en.append("EN_notice")
+    if missing_en:
+        raise ValueError(
+            "Missing required English CR-01 fields: " + ", ".join(missing_en)
+        )
+
+    service_descriptions = [
+        "Structured maintenance tasks and clear responsibilities for technical operations.",
+        "Coordinated spare parts requirements and supplier delivery schedules.",
+        "Traceable and practical structure for your operational documentation.",
+    ]
+    cards_html = "\n".join(
+        f"""      <article class="service-card">
+        <h3>{srv_title}</h3>
+        <p>{service_descriptions[idx] if idx < len(service_descriptions) else srv_title}</p>
+      </article>"""
+        for idx, srv_title in enumerate(en_services)
+    )
+
+    return f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{en_title} – {en_main}</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#main-content">Skip to main content</a>
+
+  <div class="course-notice" role="note" aria-label="Course project notice">
+    {en_notice}
+  </div>
+
+  <header class="site-header">
+    <div class="container header-inner">
+      <span class="brand-name">{en_title}</span>
+      <nav class="site-nav" aria-label="Primary navigation">
+        <ul class="nav-list">
+        <li><a href="#services">Services</a></li>
+        <li><a href="#target-groups">Target Groups</a></li>
+        <li><a href="#approach">Working Approach</a></li>
+        <li><a href="#contact">Contact</a></li>
+        <li><a class="lang-switch" href="index.html" lang="de" hreflang="de">Deutsch (DE)</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container" id="main-content">
+    <section class="hero" id="top" aria-labelledby="hero-heading">
+      <h1 id="hero-heading">{en_title}</h1>
+      <p class="lead">{en_main}</p>
+      <p class="hero-actions">
+        <a class="cta-link" href="{en_contact_href}">{en_contact_label}</a>
+        <a class="lang-switch" href="index.html" lang="de" hreflang="de">Zur deutschen Version (DE)</a>
+      </p>
+    </section>
+
+    <section class="services" id="services" aria-labelledby="services-heading">
+      <h2 id="services-heading">Services Overview</h2>
+      <div class="service-grid">
+{cards_html}
+      </div>
+    </section>
+
+    <section class="target-groups" id="target-groups" aria-labelledby="target-groups-heading">
+      <h2 id="target-groups-heading">Who We Work For</h2>
+      <p>Our practical support is tailored to:</p>
+      <ul class="target-group-list">
+        <li class="target-group-item">Small manufacturing companies</li>
+        <li class="target-group-item">Technical service companies</li>
+        <li class="target-group-item">{en_target_group}</li>
+      </ul>
+    </section>
+
+    <section class="working-approach" id="approach" aria-labelledby="approach-heading">
+      <h2 id="approach-heading">How We Work</h2>
+      <p class="approach-statement">A dedicated point of contact, a jointly agreed scope of services, and traceable results.</p>
+    </section>
+
+    <section class="contact" id="contact" aria-labelledby="contact-heading">
+      <h2 id="contact-heading">Contact</h2>
+      <p>Would you like to request non-binding information for international enquiries or technical purchasing? Contact us directly by email:</p>
+      <a class="cta-link" href="{en_contact_href}">{en_contact_label}</a>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <p>&copy; 2026 {en_title} · Hamburg · <a href="index.html" lang="de" hreflang="de">Deutsch (DE)</a></p>
     </div>
   </footer>
 </body>
@@ -786,13 +1131,25 @@ def run_customer_delivery_workflow(
     enforce_clean_factory_commit: bool | None = None,
 ) -> CustomerDeliveryWorkflowResult:
     """Execute the multi-agent customer delivery workflow on the external product repo."""
-    cfg_acceptance_criteria = ["AC-01", "AC-02", "AC-03", "AC-04", "AC-05", "AC-06", "AC-07", "AC-08"]
+    cfg_acceptance_criteria = [
+        "AC-01",
+        "AC-02",
+        "AC-03",
+        "AC-04",
+        "AC-05",
+        "AC-06",
+        "AC-07",
+        "AC-08",
+    ]
+    cfg_session = 5
     try:
         cfg_data = load_project_config(project_id)
         if isinstance(cfg_data.get("acceptance_criteria_in_scope"), list):
             cfg_acceptance_criteria = [
                 str(x) for x in cfg_data["acceptance_criteria_in_scope"]
             ]
+        if isinstance(cfg_data.get("session"), int):
+            cfg_session = int(cfg_data["session"])
     except Exception:
         pass
 
@@ -850,9 +1207,46 @@ def run_customer_delivery_workflow(
         loaded_files: dict[str, str] = {}
 
         for rel_path in t.input_files:
-            loaded_files[rel_path] = read_product_file_tool(product_root, rel_path)
-            if "read_product_file_tool" not in tools_used:
-                tools_used.append("read_product_file_tool")
+            try:
+                loaded_files[rel_path] = read_product_file_tool(product_root, rel_path)
+                if "read_product_file_tool" not in tools_used:
+                    tools_used.append("read_product_file_tool")
+            except FileNotFoundError:
+                if rel_path == t.target_product_file or len(t.input_files) == 1:
+                    raise
+
+        if t.target_product_file not in loaded_files:
+            try:
+                loaded_files[t.target_product_file] = read_product_file_tool(
+                    product_root, t.target_product_file
+                )
+                if "read_product_file_tool" not in tools_used:
+                    tools_used.append("read_product_file_tool")
+            except Exception:
+                pass
+
+        # F-NEW #1: Check if target_product_file already contains verified R-BASE content
+        verified_baseline = extract_verified_baseline_from_product_html(
+            loaded_files.get(t.target_product_file, "")
+        )
+        delta_keys: list[str] = []
+        baseline_content: dict[str, str] = {}
+        if verified_baseline:
+            candidate_deltas = [
+                k for k in req_map.keys() if k not in verified_baseline
+            ]
+            if candidate_deltas:
+                delta_keys = candidate_deltas
+                baseline_content = verified_baseline
+
+        prompt_req_map = (
+            {k: req_map[k] for k in delta_keys} if delta_keys else req_map
+        )
+        first_doc_excerpt = ""
+        for rel_path in t.input_files:
+            if rel_path in loaded_files:
+                first_doc_excerpt = loaded_files[rel_path][:1200]
+                break
 
         system_text = (
             "You are the Software Architect agent planning customer delivery "
@@ -866,8 +1260,9 @@ def run_customer_delivery_workflow(
             f"Task ID: {t.task_id}\n"
             f"Target File: {t.target_product_file}\n"
             f"Acceptance Criteria: {json.dumps(ac_list)}\n"
-            f"Required Verbatim Strings:\n{json.dumps(req_map, ensure_ascii=False, indent=2)}\n"
-            f"Customer Issue Excerpt:\n{loaded_files.get(t.input_files[0], '')[:1500]}"
+            f"Delta Mode Active: {bool(delta_keys)} (delta_keys={delta_keys})\n"
+            f"Required Verbatim Strings:\n{json.dumps(prompt_req_map, ensure_ascii=False, indent=2)}\n"
+            f"Customer Issue Excerpt:\n{first_doc_excerpt}"
         )
         text, usage, llm_error = _invoke_llm(architect_llm, system_text, human_text)
         duration = time.perf_counter() - started
@@ -925,6 +1320,8 @@ def run_customer_delivery_workflow(
             target_product_file=t.target_product_file,
             acceptance_criteria=ac_list,
             required_content=req_map,
+            delta_keys=delta_keys,
+            baseline_content=baseline_content,
             architecture_decisions=decisions,
             ready_for_implementation=ready_for_imp,
         )
@@ -962,6 +1359,7 @@ def run_customer_delivery_workflow(
                 "summary": plan_res.summary,
                 "tools": tools_used,
                 "handover_to": handover.to_role,
+                "delta_keys": delta_keys,
                 "ready_for_implementation": ready_for_imp,
                 "duration_seconds": plan_res.duration_seconds,
                 "calls": calls,
@@ -998,6 +1396,8 @@ def run_customer_delivery_workflow(
                 product_test_target=t.product_test_target,
                 acceptance_criteria=handover.acceptance_criteria,
                 iteration=iteration,
+                pre_gate_validation_passed=False,
+                pre_gate_findings=["Architect handover was not ready."],
                 ready_for_qa=False,
             )
             imp_res = ImplementationStepResult(
@@ -1026,19 +1426,29 @@ def run_customer_delivery_workflow(
                 "implementation_history": history,
             }
 
-        expected_keys = list(handover.required_content.keys())
+        use_delta_mode = bool(handover.delta_keys and handover.baseline_content)
+        prompt_required_content = (
+            {
+                k: handover.required_content[k]
+                for k in handover.delta_keys
+                if k in handover.required_content
+            }
+            if use_delta_mode
+            else handover.required_content
+        )
+        expected_keys = list(prompt_required_content.keys())
+
         system_text = (
             "You are the Implementation Engineer agent generating the Nordwerk Industrie-Service "
             "website from the structured ProductHandoverPayload. "
             "Return ONLY a valid JSON object containing every key from required_content copied "
-            "verbatim in German, plus a concise 'summary' key (under 15 words) at the end. "
+            "verbatim, plus a concise 'summary' key (under 15 words) at the end. "
             "Do not omit any key from required_content and do not invent unrequested claims."
         )
         compact_handover = {
             "task_id": handover.task_id,
             "target_product_file": handover.target_product_file,
-            "acceptance_criteria": handover.acceptance_criteria,
-            "required_content": handover.required_content,
+            "required_content": prompt_required_content,
             "required_json_keys": [*expected_keys, "summary"],
         }
         human_text = (
@@ -1056,9 +1466,12 @@ def run_customer_delivery_workflow(
         calls = 0 if llm_error and implementation_llm is None else 1
 
         written_rel: str | None = None
+        modified_files: list[str] = []
         sha256_hex = ""
         patch_path_str: str | None = None
         tools_used: list[str] = []
+        pre_gate_passed = False
+        pre_gate_findings: list[str] = []
         ready_for_qa = False
         status: Literal["completed", "needs_review", "error"] = "error"
         summary = ""
@@ -1072,15 +1485,62 @@ def run_customer_delivery_workflow(
         else:
             try:
                 parsed_fields = _extract_json_dict(text)
-                html_content = _render_html_document(parsed_fields)
+                if use_delta_mode and "html_content" not in parsed_fields:
+                    flat_llm_fields: dict[str, Any] = {}
+                    for nested_key in ("required_content", "content"):
+                        if isinstance(parsed_fields.get(nested_key), dict):
+                            flat_llm_fields.update(parsed_fields[nested_key])
+                    flat_llm_fields.update(parsed_fields)
+                    missing_deltas = [
+                        dk
+                        for dk in handover.delta_keys
+                        if not isinstance(flat_llm_fields.get(dk), str)
+                        or not str(flat_llm_fields.get(dk)).strip()
+                    ]
+                    if missing_deltas:
+                        raise ValueError(
+                            "LLM implementation output is missing required delta keys "
+                            "(no fallback allowed): " + ", ".join(missing_deltas)
+                        )
+                    effective_fields = {
+                        **handover.baseline_content,
+                        **flat_llm_fields,
+                    }
+                else:
+                    effective_fields = parsed_fields
+
+                html_content = _render_html_document(effective_fields)
+                has_english_fields = any(
+                    k.startswith("EN_") for k in handover.required_content.keys()
+                ) or any(k.startswith("EN_") for k in effective_fields.keys())
+                en_html_content: str | None = None
+                if has_english_fields and "html_content" not in effective_fields:
+                    en_html_content = _render_english_html_document(effective_fields)
+
+                # F-NEW #2: Deterministic in-memory pre-gate validation before writing/handover
+                pre_gate_findings = validate_rendered_html_pre_gate(
+                    html_content,
+                    handover.required_content,
+                    en_html=en_html_content,
+                )
+                if pre_gate_findings:
+                    pre_gate_passed = False
+                    raise ValueError(
+                        "Pre-gate HTML validation failed: "
+                        + "; ".join(pre_gate_findings)
+                    )
+                pre_gate_passed = True
+
                 written_rel, sha256_hex = write_product_file_tool(
                     product_root,
                     t.target_product_file,
                     html_content,
                     allowed_write_prefixes=t.allowed_write_prefixes,
                 )
+                modified_files = [written_rel]
                 tools_used = ["write_product_file_tool"]
-                diff_lines = list(
+
+                diff_chunks = list(
                     difflib.unified_diff(
                         state.get("initial_file_snapshot", "").splitlines(keepends=True),
                         html_content.splitlines(keepends=True),
@@ -1088,14 +1548,33 @@ def run_customer_delivery_workflow(
                         tofile=f"b/{written_rel}",
                     )
                 )
+
+                if en_html_content is not None:
+                    en_rel, _ = write_product_file_tool(
+                        product_root,
+                        "site/en.html",
+                        en_html_content,
+                        allowed_write_prefixes=t.allowed_write_prefixes,
+                    )
+                    if en_rel not in modified_files:
+                        modified_files.append(en_rel)
+                    diff_chunks.extend(
+                        difflib.unified_diff(
+                            [],
+                            en_html_content.splitlines(keepends=True),
+                            fromfile="/dev/null",
+                            tofile=f"b/{en_rel}",
+                        )
+                    )
+
                 patch_file = state["run_dir"] / "changes.patch"
-                patch_file.write_text("".join(diff_lines), encoding="utf-8")
+                patch_file.write_text("".join(diff_chunks), encoding="utf-8")
                 patch_path_str = str(patch_file)
                 raw_summary = parsed_fields.get("summary")
                 summary = (
                     raw_summary.strip()
                     if isinstance(raw_summary, str) and raw_summary.strip()
-                    else f"Generated {t.target_product_file} from validated LLM fields (iteration {iteration})."
+                    else f"Generated {', '.join(modified_files)} from validated LLM fields (iteration {iteration})."
                 )
                 status = "completed"
                 ready_for_qa = True
@@ -1119,11 +1598,13 @@ def run_customer_delivery_workflow(
             task_id=t.task_id,
             workflow_id=t.workflow_id,
             product_repo_path=str(product_root),
-            modified_files=[written_rel] if written_rel else [],
+            modified_files=modified_files,
             artifact_sha256=sha256_hex,
             product_test_target=t.product_test_target,
             acceptance_criteria=handover.acceptance_criteria,
             iteration=iteration,
+            pre_gate_validation_passed=pre_gate_passed,
+            pre_gate_findings=pre_gate_findings,
             ready_for_qa=ready_for_qa,
         )
 
@@ -1165,7 +1646,10 @@ def run_customer_delivery_workflow(
                 "summary": imp_res.summary,
                 "tools": tools_used,
                 "written_file": written_rel,
+                "modified_files": modified_files,
                 "artifact_sha256": sha256_hex,
+                "delta_mode": use_delta_mode,
+                "pre_gate_validation_passed": pre_gate_passed,
                 "handover_to": qa_handover.to_role,
                 "ready_for_qa": ready_for_qa,
                 "duration_seconds": imp_res.duration_seconds,
@@ -1397,15 +1881,43 @@ def run_customer_delivery_workflow(
     run_ids = [str(r["run_id"]) for r in trace_records if "run_id" in r]
     latest_imp = final_state["implementation_history"][-1]
     latest_qa = final_state["qa_history"][-1]
-    product_output_commit = _git_head_commit(product_root)
+    head_after_run = _git_head_commit(product_root)
+
+    # Distinguish uncommitted working-tree modifications during the run from subsequent product commits
+    if latest_imp.written_file:
+        if head_after_run != product_input_commit and head_after_run != "unknown":
+            product_worktree_state = "committed"
+            product_output_commit = head_after_run
+        else:
+            product_worktree_state = "uncommitted_worktree"
+            product_output_commit = "uncommitted_worktree"
+    else:
+        product_worktree_state = "unchanged"
+        product_output_commit = head_after_run
 
     manifest_path = run_dir / "manifest.json"
     report_path = run_dir / "workflow-report.json"
     patch_path = run_dir / "changes.patch"
 
+    artifact_hashes: dict[str, str] = {}
+    if latest_imp.written_file:
+        for mod_rel in latest_imp.handover.modified_files or [latest_imp.written_file]:
+            try:
+                mod_target = validate_product_workspace_path(
+                    product_root, mod_rel, for_write=False
+                )
+                if mod_target.is_file():
+                    artifact_hashes[mod_rel] = hashlib.sha256(
+                        mod_target.read_bytes()
+                    ).hexdigest()
+            except Exception:
+                pass
+        if not artifact_hashes:
+            artifact_hashes[latest_imp.written_file] = latest_imp.artifact_sha256
+
     manifest_payload = {
         "company": "HAW Agentic Software Factory",
-        "session": 4,
+        "session": cfg_session,
         "project_id": task.project_id,
         "customer_task_id": task.task_id,
         "team_size": 6,
@@ -1414,7 +1926,9 @@ def run_customer_delivery_workflow(
         "factory_dirty_files": factory_dirty_files,
         "workflow_code_sha256": workflow_code_sha256,
         "product_input_commit": product_input_commit,
+        "product_worktree_state": product_worktree_state,
         "product_output_commit": product_output_commit,
+        "subsequent_product_commit": None,
         "workflow_ids": [task.workflow_id],
         "run_ids": run_ids,
         "llm_provider": settings.llm_provider if architect_llm is None else "injected",
@@ -1424,7 +1938,7 @@ def run_customer_delivery_workflow(
         else "mock",
         "test_commands": [
             "python -m pytest -q",
-            f"python -m pytest {task.product_test_target} -q (in {task.product_repo_path})",
+            f"python -m pytest {task.product_test_target} -q (in ../client-01-website)",
         ],
         "product_test_passed": (
             latest_imp.status == "completed" and latest_qa.status == "passed"
@@ -1432,14 +1946,14 @@ def run_customer_delivery_workflow(
         "iterations_used": final_state["iteration"],
         "max_correction_loops": task.max_correction_loops,
         "mock_runs_are_separate": is_mock_run,
-        "review_file": str(run_dir / "review.json"),
-        "artifact_hashes": {
-            latest_imp.written_file or task.target_product_file: latest_imp.artifact_sha256
-        }
-        if latest_imp.written_file
-        else {},
+        "review_file": _portable_path(run_dir / "review.json"),
+        "artifact_hashes": artifact_hashes,
         "issue_and_pr_references": [
-            f"{task.product_repo_path}/{inp}" for inp in task.input_files if inp.startswith("docs/")
+            f"https://github.com/mfadhilahm/client-01-website/blob/{product_input_commit}/{inp}"
+            if product_input_commit != "unknown"
+            else f"../client-01-website/{inp}"
+            for inp in task.input_files
+            if inp.startswith("docs/")
         ],
         "cost_records": "costs/usage.csv",
         "total_estimated_agent_credits": total_credits,
@@ -1453,23 +1967,25 @@ def run_customer_delivery_workflow(
         workflow_id=task.workflow_id,
         project_id=task.project_id,
         task_id=task.task_id,
-        product_repo_path=str(product_root),
+        product_repo_path=task.product_repo_path,
         factory_commit=factory_commit,
         factory_commit_clean=factory_commit_clean,
         factory_dirty_files=factory_dirty_files,
         workflow_code_sha256=workflow_code_sha256,
         product_input_commit=product_input_commit,
+        product_worktree_state=product_worktree_state,
         product_output_commit=product_output_commit,
+        subsequent_product_commit=None,
         iterations_used=final_state["iteration"],
         max_correction_loops=task.max_correction_loops,
         architect_result=final_state["architect_result"],
         implementation_history=final_state["implementation_history"],
         qa_history=final_state["qa_history"],
         final_qa_result=latest_qa,
-        run_directory=str(run_dir),
-        trace_file=trace_file,
-        manifest_file=str(manifest_path),
-        patch_file=str(patch_path) if patch_path.exists() else None,
+        run_directory=_portable_path(run_dir),
+        trace_file=_portable_path(Path(trace_file)),
+        manifest_file=_portable_path(manifest_path),
+        patch_file=_portable_path(patch_path) if patch_path.exists() else None,
         human_gate_status=final_state["human_gate_status"],
         human_approval_required=True,
         approved_by_human=None,
@@ -1527,6 +2043,19 @@ def record_customer_human_review(
         if latest_imp.written_file
         else {}
     )
+    manifest_file = rpath.parent / "manifest.json"
+    if manifest_file.is_file():
+        try:
+            manifest_data = json.loads(manifest_file.read_text(encoding="utf-8"))
+            if isinstance(manifest_data, dict) and isinstance(
+                manifest_data.get("artifact_hashes"), dict
+            ):
+                artifact_hashes = {
+                    str(k): str(v)
+                    for k, v in manifest_data["artifact_hashes"].items()
+                }
+        except Exception:
+            pass
 
     default_accepted = (
         list(report.architect_result.handover.acceptance_criteria)
@@ -1534,10 +2063,31 @@ def record_customer_human_review(
         else []
     )
     default_open = (
-        ["AC-09, AC-10 due in Session 5"]
+        ["Final customer acceptance by instructor in live review (pending_customer_acceptance)"]
         if decision == "approved"
         else list(report.architect_result.handover.acceptance_criteria)
     )
+
+    clean_tested_commit = (tested_source_commit or "").strip()
+    if (
+        clean_tested_commit
+        and clean_tested_commit not in ("unknown", "uncommitted_worktree", report.product_input_commit)
+    ):
+        resolved_tested_commit = clean_tested_commit
+        worktree_state = "committed_after_review"
+        subsequent_commit: str | None = clean_tested_commit
+    else:
+        resolved_tested_commit = (
+            report.product_output_commit
+            if report.product_output_commit not in ("", report.product_input_commit)
+            else "uncommitted_worktree"
+        )
+        worktree_state = (
+            "uncommitted_worktree (rejected_not_committed)"
+            if decision != "approved"
+            else report.product_worktree_state
+        )
+        subsequent_commit = None
 
     review_record = CustomerHumanReviewRecord(
         task_id=report.task_id,
@@ -1546,10 +2096,12 @@ def record_customer_human_review(
         decision=decision,
         reviewer=clean_reviewer,
         decided_at_utc=datetime.now(timezone.utc).isoformat(),
-        tested_source_commit=tested_source_commit or report.product_output_commit,
+        tested_source_commit=resolved_tested_commit,
         product_input_commit=report.product_input_commit,
+        product_worktree_state=worktree_state,
+        subsequent_product_commit=subsequent_commit,
         reviewed_artifact_hashes=artifact_hashes,
-        report_path=str(rpath.resolve()),
+        report_path=_portable_path(rpath),
         report_sha256=hashlib.sha256(raw_bytes).hexdigest(),
         test_evidence_paths=[report.trace_file, report.manifest_file],
         accepted_criteria=accepted_criteria
@@ -1560,6 +2112,19 @@ def record_customer_human_review(
         else default_open,
         rationale=rationale.strip(),
     )
+
+    if manifest_file.is_file():
+        try:
+            manifest_data = json.loads(manifest_file.read_text(encoding="utf-8"))
+            if isinstance(manifest_data, dict):
+                manifest_data["product_worktree_state"] = worktree_state
+                manifest_data["subsequent_product_commit"] = subsequent_commit
+                manifest_file.write_text(
+                    json.dumps(manifest_data, indent=2, ensure_ascii=False) + "\n",
+                    encoding="utf-8",
+                )
+        except Exception:
+            pass
 
     review_path = rpath.parent / "review.json"
     review_path.write_text(

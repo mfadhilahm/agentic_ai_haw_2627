@@ -9,7 +9,7 @@
   "factory_dirty_files": [],
   "workflow_code_sha256": "f2b9d3d00df0a1d4020175e7ee9af1d93aba1689c818eb9dc30af3da2fe89ecf",
   "product_input_commit": "473865222ef23e1348046b3b06af759b2182515f",
-  "product_output_commit": "473865222ef23e1348046b3b06af759b2182515f",
+  "product_output_commit": "uncommitted_worktree",
   "workflow_ids": [
     "WF-WEBSITE01-S4-001"
   ],
@@ -29,13 +29,15 @@
   "iterations_used": 1,
   "max_correction_loops": 2,
   "mock_runs_are_separate": false,
-  "review_file": "C:\\Hochschule\\Module\\Semester 5\\Agentic AI\\agentic_ai_haw_2627\\runs\\website-01\\WF-WEBSITE01-S4-001\\review.json",
+  "review_file": "runs/website-01/WF-WEBSITE01-S4-001/review.json",
   "artifact_hashes": {
     "site/index.html": "4a6a61db6f64d052957fe6d112955abf72374be4efb3d46c59a44d83a65cc3d3"
   },
   "issue_and_pr_references": [
-    "../client-01-website/docs/issue-02-session-04.md"
+    "https://github.com/mfadhilahm/client-01-website/blob/ecb598140d0b2d0778d891f9bc1acc8c36295a93/docs/issue-02-session-04.md"
   ],
   "cost_records": "costs/usage.csv",
-  "total_estimated_agent_credits": 4.7113
+  "total_estimated_agent_credits": 4.7113,
+  "product_worktree_state": "committed_after_review",
+  "subsequent_product_commit": "ecb598140d0b2d0778d891f9bc1acc8c36295a93"
 }

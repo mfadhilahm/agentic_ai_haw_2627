@@ -1,13 +1,16 @@
-# Session 3 & 4 Customer Project Configuration (A1: Separation, Reuse, and Addressing)
+# Session 3, 4 & 5 Customer Project Configuration (A1: Separation, Reuse, and Versioned Change)
 project_id: "website-01"
 customer_name: "Nordwerk Industrie-Service"
-customer_task_id: "NW-S4-001"
+customer_task_id: "NW-S5-CR01"
 previous_customer_task_ids:
   - "NW-S3-001"
-session: 4
+  - "NW-S4-001"
+session: 5
 
 # Relative path from the Software Factory repository root to the separate product checkout
 product_repo_path: "../client-01-website"
+factory_github_url: "https://github.com/mfadhilahm/agentic_ai_haw_2627"
+product_github_url: "https://github.com/mfadhilahm/client-01-website"
 
 # Allowed writable directory prefixes inside the product checkout (A4 sandbox)
 allowed_write_prefixes:
@@ -15,22 +18,24 @@ allowed_write_prefixes:
 
 # Input files in the product checkout inspected by the Factory
 product_input_files:
-  - "docs/issue-02-session-04.md"
+  - "docs/issue-03-session-05-cr01.md"
   - "site/index.html"
   - "site/styles.css"
 
-# Target product file modified by the implementation agent
+# Target product file(s) modified by the implementation agent
 target_product_file: "site/index.html"
+secondary_product_files:
+  - "site/en.html"
 
-# Separate automated product check executed in the product checkout (B6)
-product_test_target: "tests/test_website_s4.py"
+# Separate automated product check executed in the product checkout (B6 / A3)
+product_test_target: "tests/test_website_s5.py"
 product_test_command: "python -m unittest discover -s tests -p \"test_*.py\" -v"
 product_start_command: "python -m http.server 8080 --directory site"
 
 # Bounded retry/correction loop before human escalation (A4)
 max_correction_loops: 2
 
-# Accountable humans for Session 3 & 4 (D1)
+# Accountable humans for Session 3, 4 & 5 (D1)
 accountable_humans:
   commission_lead: "yaw"
   requirements_owner: "saad"
@@ -39,9 +44,10 @@ accountable_humans:
   technical_delivery: "mirko"
   agent_and_integration: "muhammad"
   qa_and_checks: "felix"
+  security_advisory: "muhammad"
   release_approval: "saad"
 
-# Session 4 Release Candidate Scope & Required Verbatim Content (AC-01..AC-08)
+# Session 5 Scope & Required Verbatim Content (AC-01..AC-10, including CR-01)
 acceptance_criteria_in_scope:
   - "AC-01"
   - "AC-02"
@@ -51,6 +57,8 @@ acceptance_criteria_in_scope:
   - "AC-06"
   - "AC-07"
   - "AC-08"
+  - "AC-09"
+  - "AC-10"
 
 required_content:
   N-01: "Nordwerk Industrie-Service"
@@ -68,11 +76,50 @@ required_content:
   N-08_href: "mailto:kontakt@nordwerk.example"
   N-09: "Fiktives Unternehmen – Lehrprojekt der HAW Hamburg. Keine realen Angebote oder Kontaktaufnahme."
 
+# Session 5 Customer Change Request CR-01 (AC-09, B1, B2, B3)
+cr01_change_task:
+  task_id: "NW-S5-CR01"
+  description: "Wir möchten internationale Anfragen ermöglichen und künftig auch technische Einkaufsabteilungen ansprechen. Bitte ergänzen Sie eine kurze englische Einstiegsseite bzw. klar bezeichnete englische Ansicht. Die bisherige deutsche Website soll erhalten bleiben."
+  product_input_files:
+    - "docs/issue-03-session-05-cr01.md"
+    - "site/index.html"
+    - "site/styles.css"
+  product_test_target: "tests/test_website_s5.py"
+  delta_keys:
+    - "N-06_group_3"
+    - "EN_title"
+    - "EN_main_statement"
+    - "EN_service_1"
+    - "EN_service_2"
+    - "EN_service_3"
+    - "EN_target_group"
+    - "EN_contact_label"
+    - "EN_contact_href"
+    - "EN_notice"
+  additional_required_content:
+    N-06_group_3: "Technische Einkaufsabteilungen"
+    EN_title: "Nordwerk Industrie-Service"
+    EN_main_statement: "Practical support for your technical operations."
+    EN_service_1: "Maintenance planning"
+    EN_service_2: "Spare parts coordination"
+    EN_service_3: "Operational documentation"
+    EN_target_group: "Technical purchasing departments"
+    EN_contact_label: "Request information"
+    EN_contact_href: "mailto:kontakt@nordwerk.example"
+    EN_notice: "Fictional company – HAW Hamburg course project. No real offers or contact."
+
 # Isolated Session 4 / Session 5 reference experiment task (R-01 on R-BASE)
 r01_reference_task:
   task_id: "R-01"
   description: "Ergänze unter den Leistungen die Karte „Projektkoordination“ mit dem Text „Wir koordinieren klar abgegrenzte technische Vorhaben mit Ihrem Team.“ Alle bisherigen Inhalte, Kontaktziele und Navigation müssen erhalten bleiben."
+  product_input_files:
+    - "docs/issue-02-session-04.md"
+    - "site/index.html"
+    - "site/styles.css"
   product_test_target: "tests/verify_r01_baseline.py"
+  delta_keys:
+    - "R-01_title"
+    - "R-01_text"
   additional_required_content:
     R-01_title: "Projektkoordination"
     R-01_text: "Wir koordinieren klar abgegrenzte technische Vorhaben mit Ihrem Team."

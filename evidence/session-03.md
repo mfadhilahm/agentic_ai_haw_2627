@@ -10,11 +10,11 @@
 
 | Repository | Role | GitHub URL / Checkout Path | Input Commit (Frozen Before Run) | Output / Evidence Commit |
 | :--- | :--- | :--- | :--- | :--- |
-| **`agentic_ai_haw_2627`** | Software Factory | `https://github.com/mfadhilahm/agentic_ai_haw_2627` | `c6b8348ccbb1a6f83e8082a18807270331e142d2` | Recorded in Session 3 submission commit |
-| **`client-01-website`** | Customer Product | `https://github.com/mfadhilahm/client-01-website` (`../client-01-website`) | `15d7ce55ba48effe15904833b0b9df819552a6d5` (`15d7ce5`) | `5b9aefa412a67cf3350c5aac98c856a099d72bec` (`5b9aefa`) |
+| **`agentic_ai_haw_2627`** | Software Factory | [`https://github.com/mfadhilahm/agentic_ai_haw_2627`](https://github.com/mfadhilahm/agentic_ai_haw_2627) | [`c6b8348`](https://github.com/mfadhilahm/agentic_ai_haw_2627/commit/c6b8348ccbb1a6f83e8082a18807270331e142d2) | [`817128b`](https://github.com/mfadhilahm/agentic_ai_haw_2627/commit/817128b) |
+| **`client-01-website`** | Customer Product | [`https://github.com/mfadhilahm/client-01-website`](https://github.com/mfadhilahm/client-01-website) (`../client-01-website`) | [`15d7ce5`](https://github.com/mfadhilahm/client-01-website/commit/15d7ce55ba48effe15904833b0b9df819552a6d5) | `uncommitted_worktree` during run $\rightarrow$ committed after review as [`5b9aefa`](https://github.com/mfadhilahm/client-01-website/commit/5b9aefa412a67cf3350c5aac98c856a099d72bec) |
 
 - **Project Configuration File:** [`config/projects/website-01.yaml`](../config/projects/website-01.yaml)
-- **Customer Issue:** `client-01-website` Issue `#1` / `docs/issue-01-session-03.md` (`NW-S3-001`)
+- **Customer Issue:** [`client-01-website/docs/issue-01-session-03.md`](https://github.com/mfadhilahm/client-01-website/blob/5b9aefa412a67cf3350c5aac98c856a099d72bec/docs/issue-01-session-03.md) (`NW-S3-001`)
 
 ---
 
