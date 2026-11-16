@@ -1,0 +1,31 @@
+{
+  "task_id": "HP-S6-001",
+  "project_id": "quotation-02",
+  "workflow_id": "WF-QUOTATION02-S6-002",
+  "decision": "approved",
+  "reviewer": "saad",
+  "decided_at_utc": "2026-11-16T10:33:30.282597+00:00",
+  "tested_source_commit": "724cfe72a1758e40346d77afd4b2cc4fbe7eb57d",
+  "product_input_commit": "a167bf3cc96fc8ce00c43c55c17a616a113f9290",
+  "product_worktree_state": "committed_after_review",
+  "subsequent_product_commit": "724cfe72a1758e40346d77afd4b2cc4fbe7eb57d",
+  "reviewed_artifact_hashes": {
+    "quotation/calculator.py": "72a490c672026c95d8d7449b6d8aaeb7287bc6d024ad4ff921bd1806d4b90294"
+  },
+  "report_path": "runs/quotation-02/WF-QUOTATION02-S6-002/workflow-report.json",
+  "report_sha256": "d17c7b79724b1400bafbac39d0235758da4c4323eda81a70ec4c0e38651f9f31",
+  "test_evidence_paths": [
+    "runs/quotation-02/WF-QUOTATION02-S6-002/trace.jsonl",
+    "runs/quotation-02/WF-QUOTATION02-S6-002/manifest.json"
+  ],
+  "accepted_criteria": [
+    "HP-AC01",
+    "HP-AC02 (Q01, Q03)",
+    "HP-AC04 (E01)"
+  ],
+  "open_criteria": [
+    "Final customer acceptance by instructor in live review (pending_customer_acceptance)"
+  ],
+  "rationale": "Reviewed changes.patch and verified Q01 (250/1200/1450 cents), Q03 (12500/625/11875/1200/13075 cents), E01 rejection (quantity 0), and unchanged Nordwerk repo state.",
+  "identity_assurance": "self_declared_course_review"
+}

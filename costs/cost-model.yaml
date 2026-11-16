@@ -14,8 +14,8 @@ ci:
   run_credits: 1.0
   runs: 10
 
-session: 5
-date: 2026-11-09
+session: 6
+date: 2026-11-16
 
 # -----------------------------------------------------------------------------
 # Session 3–5 Customer Project 01 (Nordwerk Industrie-Service) Budget Plan (C2, C3)
@@ -305,6 +305,45 @@ agent_runs:
         recorded_output_tokens: 819
         credits: 5.4166
 
+  session_06:
+    project_id: "quotation-02"
+    customer_task_id: "HP-S6-001"
+    model: "qwen3:4b@359d7dd4bcda"
+    includes_failed_runs: true
+    workflows:
+      - workflow_id: "WF-QUOTATION02-S6-001"
+        factory_commit: "5270442050faf64484ae7d053a3213c091bc187f"
+        status: "failed_and_rejected (changes_requested)"
+        note: "Architect LLM echoed required_content keys instead of architecture_decisions/summary; implementation skipped; QA failed (exit_code=1)."
+        run_ids:
+          - "0f9f2778-2f54-4e00-bfe3-f1c2dd2dc3d3"
+          - "faf6a063-a2a6-4bcb-9846-3ce1734fe2fc"
+        calls: 2
+        duration_seconds: 168.7442
+        recorded_input_tokens: 2736
+        recorded_output_tokens: 328
+        credits: 3.7552
+      - workflow_id: "WF-QUOTATION02-S6-002"
+        factory_commit: "f8d778b3968c307974016a162faeaff1c0af189c"
+        product_input_commit: "a167bf3cc96fc8ce00c43c55c17a616a113f9290"
+        product_output_commit: "724cfe72a1758e40346d77afd4b2cc4fbe7eb57d"
+        status: "approved_at_human_gate"
+        run_ids:
+          - "34ccff9e-6b33-477e-aef7-e87cd472ab93"
+          - "533c53ca-06ee-4632-94f6-cb7db3de364b"
+          - "0a10b432-99f3-4cd1-9311-bebe91e40fe8"
+          - "c363c2c1-130d-4f89-bdaa-a16dcd16593b"
+          - "0d436c3d-a2a0-4f16-a953-78f5c3a84fbd"
+        calls: 5
+        duration_seconds: 349.1044
+        recorded_input_tokens: 5648
+        recorded_output_tokens: 944
+        tools_used:
+          - "read_product_file_tool"
+          - "write_product_file_tool"
+          - "run_product_test_tool"
+        credits: 8.6417
+
 credits_calculation:
   session_01_total_credits: 166.4369
   session_02_agent_credits: 41.8849
@@ -360,3 +399,53 @@ credits_calculation:
     planned_s3_s5_factory_development_credits: 400.0
     actual_s3_s5_factory_development_credits: 400.0             # 200.0 (S3) + 125.0 (S4) + 75.0 (S5)
     actual_s3_s5_combined_total_credits: 1118.3586
+  session_06_breakdown:
+    factory_commit_initial: "5270442050faf64484ae7d053a3213c091bc187f"
+    factory_commit_fixed: "f8d778b3968c307974016a162faeaff1c0af189c"
+    product_input_commit: "a167bf3cc96fc8ce00c43c55c17a616a113f9290"
+    product_output_commit: "724cfe72a1758e40346d77afd4b2cc4fbe7eb57d"
+    nordwerk_frozen_commit: "53885e0a430dab3d75ed12b6ff4d7078aa19c595"
+    agent_credits_failed_run_001: 3.7552
+    agent_credits_approved_run_002: 8.6417
+    untraced_diagnostic_probe_credits: "unknown"
+    session_06_known_workflow_agent_credits: 12.3969
+    human_customer_delivery_credits: 100.0
+    human_review_credits: 50.0
+    human_rework_credits: 25.0
+    session_06_ci_credits_local: 0.0
+    session_06_known_customer_subtotal_credits: 187.3969   # Partial known total (175.0 human + 12.3969 tracked workflow agent + 0.0 local CI; untraced diagnostic probes marked unknown)
+    human_factory_switch_development_credits: 75.0         # Accounted separately against 150.0 S6-S8 Factory switch budget
+    session_06_known_grand_total_credits: 262.3969         # Partial known total excluding untraced diagnostic probes
+
+# -----------------------------------------------------------------------------
+# Session 6–8 Customer Project 02 (HansePack Handelsgesellschaft) Budget Plan
+# -----------------------------------------------------------------------------
+customer_project_02_budget_plan:
+  project_id: "quotation-02"
+  customer_name: "HansePack Handelsgesellschaft"
+  baseline_justification: >
+    Team of 6 engineers. Customer delivery for HansePack (S6/S7 HP-V1 delivery and
+    S8 CR-02 reserve) is budgeted separately from one-off Factory multi-project switch
+    and adaptation effort.
+  s6_s7_delivery_plan_budget:
+    human_delivery_hours: 4.5          # ~1.0h S6 slice + ~3.5h S7 full Q01-Q14, E01-E10, UI, JSON export
+    human_review_and_rework_hours: 1.5 # ~0.75h S6 review/rework + ~0.75h S7 fault/UI review
+    planned_human_delivery_credits: 600.0
+    planned_agent_credits: 25.0
+    planned_ci_credits: 6.0
+    total_s6_s7_delivery_budget_credits: 631.0
+  s8_reserve_budget:
+    justification: >
+      Reserved strictly for Session 8 shipping change CR-02 (HP-V2), regression checks,
+      and release handover (HP-AC08, HP-AC09).
+    human_delivery_hours: 2.0
+    human_review_and_rework_hours: 1.0
+    planned_human_reserve_credits: 300.0
+    planned_agent_and_ci_reserve_credits: 15.0
+    total_s8_reserve_credits: 315.0
+  separate_factory_switch_and_adaptation_budget:
+    justification: >
+      One-off Factory engineering to support a second customer (quotation-02.yaml,
+      central Python quotation module workflow support, and project-isolation tests).
+    planned_factory_switch_hours: 1.5
+    planned_factory_switch_credits: 150.0
