@@ -1,0 +1,67 @@
+# Session 6 Customer Project 02 Configuration (A1: Project Switch, Reuse, and Isolation)
+project_id: "quotation-02"
+customer_name: "HansePack Handelsgesellschaft"
+customer_task_id: "HP-S6-001"
+session: 6
+artifact_type: "python_quotation_module"
+
+task_description: "Implement Python calculation for HP-BOX quantities 1 and 50 under HP-V1, including 5%/10% discount, ROUND_HALF_UP rounding, shipping, and total. Reject quantity 0."
+
+# Relative path from the Software Factory repository root to the separate product checkout
+product_repo_path: "../client-02-quotation"
+factory_github_url: "https://github.com/mfadhilahm/agentic_ai_haw_2627"
+product_github_url: "https://github.com/minhnyn/client-02-quotation"
+
+# Allowed writable directory prefixes inside the product checkout (A4 sandbox)
+allowed_write_prefixes:
+  - "quotation/"
+
+# Input files in the product checkout inspected by the Factory (customer fixtures stay read-only)
+product_input_files:
+  - "docs/issue-01-session-06.md"
+  - "data/HansePack_Katalog.json"
+  - "data/HansePack_Referenzfaelle.json"
+  - "quotation/calculator.py"
+
+# Target product file modified by the implementation agent
+target_product_file: "quotation/calculator.py"
+
+# Separate automated product check executed in the product checkout (B1..B5 / A3)
+product_test_target: "tests/test_quotation_s6.py"
+product_test_command: "python -m pytest tests/test_quotation_s6.py -q"
+product_start_command: "python main.py --sku HP-BOX --quantity 50"
+
+# Bounded retry/correction loop before human escalation (A4)
+max_correction_loops: 2
+
+# Accountable humans for Session 6 (D1)
+accountable_humans:
+  commission_lead: "yaw"
+  requirements_owner: "saad"
+  project_manager: "felix"
+  architecture: "minh"
+  technical_delivery: "mirko"
+  agent_and_integration: "muhammad"
+  qa_and_checks: "felix"
+  release_approval: "saad"
+
+# Session 6 Scope (HP-AC01, HP-AC02 Q01/Q03, HP-AC04 E01)
+acceptance_criteria_in_scope:
+  - "HP-AC01"
+  - "HP-AC02 (Q01, Q03)"
+  - "HP-AC04 (E01)"
+
+# Binding HP-V1 business rules for structured agent handover and validation
+required_content:
+  rule_version: "HP-V1"
+  currency: "EUR"
+  catalogue_path: "data/HansePack_Katalog.json"
+  rounding_mode: "ROUND_HALF_UP"
+  min_quantity: "1"
+  max_quantity: "10000"
+  max_lines: "3"
+  discount_tier_50_percent: "5"
+  discount_tier_100_percent: "10"
+  free_shipping_threshold_cents: "50000"
+  shipping_fee_cents: "1200"
+  course_notice: "Net amounts – course project, not a binding quotation"

@@ -8,6 +8,7 @@ run manifests, and a human review gate.
 from __future__ import annotations
 
 import argparse
+import ast
 import difflib
 import hashlib
 import json
@@ -110,6 +111,31 @@ FORBIDDEN_UNVERIFIED_CLAIMS: tuple[str, ...] = (
     "TÜV",
     "24/7",
     "TODO_FACTORY_GENERATION",
+)
+
+HANSEPACK_S6_REQUIRED_RULES: dict[str, str] = {
+    "rule_version": "HP-V1",
+    "currency": "EUR",
+    "catalogue_path": "data/HansePack_Katalog.json",
+    "rounding_mode": "ROUND_HALF_UP",
+    "min_quantity": "1",
+    "max_quantity": "10000",
+    "max_lines": "3",
+    "discount_tier_50_percent": "5",
+    "discount_tier_100_percent": "10",
+    "free_shipping_threshold_cents": "50000",
+    "shipping_fee_cents": "1200",
+    "course_notice": "Net amounts – course project, not a binding quotation",
+}
+
+FORBIDDEN_PRODUCT_LLM_IMPORTS: tuple[str, ...] = (
+    "openai",
+    "ollama",
+    "langchain",
+    "httpx",
+    "requests",
+    "src.agents",
+    "src.llm",
 )
 
 
@@ -250,17 +276,31 @@ def build_task_from_project_config(
 ) -> tuple[CustomerDeliveryTask, dict[str, str]]:
     """Construct a CustomerDeliveryTask and required_content dictionary from project config."""
     cfg = load_project_config(project_id, config_dir=config_dir)
-    req_content = dict(DEFAULT_REQUIRED_CONTENT)
+    artifact_type = str(cfg.get("artifact_type", "static_html_website"))
+    req_content = (
+        dict(DEFAULT_REQUIRED_CONTENT)
+        if artifact_type == "static_html_website"
+        else {}
+    )
     if isinstance(cfg.get("required_content"), dict):
         req_content.update(
             {str(k): str(v) for k, v in cfg["required_content"].items()}
         )
 
     resolved_task_id = task_id or str(cfg.get("customer_task_id", "NW-S5-CR01"))
-    description = (
-        f"Deliver Nordwerk Industrie-Service website release ({resolved_task_id}) "
-        "in the customer repository."
-    )
+    customer_name = str(cfg.get("customer_name", project_id))
+    if isinstance(cfg.get("task_description"), str) and cfg["task_description"].strip():
+        description = cfg["task_description"].strip()
+    elif artifact_type == "static_html_website":
+        description = (
+            f"Deliver Nordwerk Industrie-Service website release ({resolved_task_id}) "
+            "in the customer repository."
+        )
+    else:
+        description = (
+            f"Deliver {customer_name} product release ({resolved_task_id}) "
+            "in the customer repository."
+        )
     product_test_target = str(
         cfg.get("product_test_target", "tests/test_website_s3.py")
     )
@@ -393,6 +433,424 @@ def validate_rendered_html_pre_gate(
                 findings.append(
                     f"Forbidden unverified claim or placeholder '{forbidden}' detected in {doc_name}"
                 )
+
+    return findings
+
+
+def _validate_and_normalize_quotation_fields(
+    fields: dict[str, Any],
+) -> dict[str, Any]:
+    """Validate structured LLM output fields for a deterministic Python quotation module.
+
+    Raises ValueError if the LLM response is empty or missing required business rules,
+    preventing failed or partial LLM calls from being masked by default logic.
+    """
+    if not isinstance(fields, dict) or not fields:
+        raise ValueError("LLM implementation output is empty or not a JSON object")
+
+    if isinstance(fields.get("python_code"), str) and fields["python_code"].strip():
+        return {"python_code": fields["python_code"].strip()}
+
+    merged: dict[str, Any] = {}
+    for nested_key in ("required_content", "content", "rules"):
+        nested = fields.get(nested_key)
+        if isinstance(nested, dict):
+            merged.update(nested)
+    merged.update(fields)
+
+    def _clean_str(key: str) -> str:
+        val = merged.get(key)
+        if isinstance(val, str) and val.strip():
+            return val.strip()
+        return ""
+
+    def _clean_int(key: str, *, min_val: int = 0) -> int | None:
+        val = merged.get(key)
+        if isinstance(val, bool) or val is None:
+            return None
+        if isinstance(val, int):
+            return val if val >= min_val else None
+        if isinstance(val, str) and val.strip():
+            try:
+                parsed_int = int(val.strip())
+            except ValueError:
+                return None
+            return parsed_int if parsed_int >= min_val else None
+        return None
+
+    rule_version = _clean_str("rule_version")
+    currency = _clean_str("currency")
+    catalogue_path = _clean_str("catalogue_path")
+    rounding_mode = _clean_str("rounding_mode")
+    course_notice = _clean_str("course_notice")
+    min_quantity = _clean_int("min_quantity", min_val=1)
+    max_quantity = _clean_int("max_quantity", min_val=1)
+    max_lines = _clean_int("max_lines", min_val=1)
+    discount_tier_50_percent = _clean_int("discount_tier_50_percent", min_val=0)
+    discount_tier_100_percent = _clean_int("discount_tier_100_percent", min_val=0)
+    free_shipping_threshold_cents = _clean_int("free_shipping_threshold_cents", min_val=0)
+    shipping_fee_cents = _clean_int("shipping_fee_cents", min_val=0)
+
+    missing: list[str] = []
+    if not rule_version:
+        missing.append("rule_version")
+    if not currency:
+        missing.append("currency")
+    if not catalogue_path:
+        missing.append("catalogue_path")
+    if rounding_mode != "ROUND_HALF_UP":
+        missing.append("rounding_mode (ROUND_HALF_UP)")
+    if min_quantity is None:
+        missing.append("min_quantity")
+    if max_quantity is None or (min_quantity is not None and max_quantity < min_quantity):
+        missing.append("max_quantity")
+    if max_lines is None:
+        missing.append("max_lines")
+    if discount_tier_50_percent is None:
+        missing.append("discount_tier_50_percent")
+    if discount_tier_100_percent is None:
+        missing.append("discount_tier_100_percent")
+    if free_shipping_threshold_cents is None:
+        missing.append("free_shipping_threshold_cents")
+    if shipping_fee_cents is None:
+        missing.append("shipping_fee_cents")
+    if not course_notice:
+        missing.append("course_notice")
+
+    if missing:
+        raise ValueError(
+            "LLM implementation output is missing required quotation rule fields "
+            "(no default code fallback allowed): " + ", ".join(missing)
+        )
+
+    return {
+        "rule_version": rule_version,
+        "currency": currency,
+        "catalogue_path": catalogue_path,
+        "rounding_mode": rounding_mode,
+        "min_quantity": min_quantity,
+        "max_quantity": max_quantity,
+        "max_lines": max_lines,
+        "discount_tier_50_percent": discount_tier_50_percent,
+        "discount_tier_100_percent": discount_tier_100_percent,
+        "free_shipping_threshold_cents": free_shipping_threshold_cents,
+        "shipping_fee_cents": shipping_fee_cents,
+        "course_notice": course_notice,
+    }
+
+
+def _render_quotation_python_module(fields: dict[str, Any]) -> str:
+    """Render deterministic Python quotation calculation code from validated rule fields.
+
+    Raises ValueError if any required field is missing or invalid; never falls back silently.
+    """
+    normalized = _validate_and_normalize_quotation_fields(fields)
+    if "python_code" in normalized:
+        return str(normalized["python_code"])
+
+    rule_version_lit = json.dumps(normalized["rule_version"], ensure_ascii=False)
+    currency_lit = json.dumps(normalized["currency"], ensure_ascii=False)
+    catalogue_lit = json.dumps(normalized["catalogue_path"], ensure_ascii=False)
+    rounding_lit = json.dumps(normalized["rounding_mode"], ensure_ascii=False)
+    course_notice_lit = json.dumps(normalized["course_notice"], ensure_ascii=False)
+
+    return f'''"""Deterministic HansePack quotation calculator ({normalized["rule_version"]}).
+
+Generated by the Software Factory implementation capability from validated
+ProductHandoverPayload rules. Runtime operates purely in Python with integer cents
+and Decimal ROUND_HALF_UP without any Factory or LLM dependency.
+"""
+
+from __future__ import annotations
+
+import json
+from decimal import Decimal, ROUND_HALF_UP
+from pathlib import Path
+from typing import Any
+
+RULE_VERSION = {rule_version_lit}
+CURRENCY = {currency_lit}
+CATALOGUE_REL_PATH = {catalogue_lit}
+ROUNDING_MODE = {rounding_lit}
+MIN_QUANTITY = {normalized["min_quantity"]}
+MAX_QUANTITY = {normalized["max_quantity"]}
+MAX_LINES = {normalized["max_lines"]}
+DISCOUNT_TIER_50_PERCENT = {normalized["discount_tier_50_percent"]}
+DISCOUNT_TIER_100_PERCENT = {normalized["discount_tier_100_percent"]}
+FREE_SHIPPING_THRESHOLD_CENTS = {normalized["free_shipping_threshold_cents"]}
+SHIPPING_FEE_CENTS = {normalized["shipping_fee_cents"]}
+COURSE_NOTICE = {course_notice_lit}
+
+DEFAULT_CATALOGUE_PATH = Path(__file__).resolve().parents[1] / CATALOGUE_REL_PATH
+
+
+class QuotationValidationError(ValueError):
+    """Raised when quotation input fails business validation."""
+
+    def __init__(self, message: str, reason: str = "validation_error") -> None:
+        super().__init__(message)
+        self.reason = reason
+
+
+def load_catalogue(
+    catalogue_path: str | Path | None = None,
+) -> dict[str, dict[str, Any]]:
+    """Load the binding HansePack product catalogue keyed by SKU."""
+    target = Path(catalogue_path) if catalogue_path is not None else DEFAULT_CATALOGUE_PATH
+    if not target.is_file():
+        raise FileNotFoundError(f"Catalogue file not found: {{target}}")
+    data = json.loads(target.read_text(encoding="utf-8"))
+    products = data.get("products")
+    if not isinstance(products, list):
+        raise ValueError("Catalogue JSON must contain a 'products' list")
+    return {{str(item["sku"]): item for item in products if isinstance(item, dict) and "sku" in item}}
+
+
+def _discount_percent_for_quantity(quantity: int) -> int:
+    if quantity >= 100:
+        return DISCOUNT_TIER_100_PERCENT
+    if quantity >= 50:
+        return DISCOUNT_TIER_50_PERCENT
+    return 0
+
+
+def _calculate_rounded_discount_cents(
+    list_amount_cents: int, discount_percent: int
+) -> int:
+    if discount_percent <= 0:
+        return 0
+    exact_discount = (
+        Decimal(list_amount_cents) * Decimal(discount_percent)
+    ) / Decimal(100)
+    return int(exact_discount.quantize(Decimal("1"), rounding=ROUND_HALF_UP))
+
+
+def _validate_items(
+    items: Any,
+    catalogue: dict[str, dict[str, Any]],
+) -> list[tuple[dict[str, Any], int]]:
+    if not isinstance(items, list):
+        raise QuotationValidationError(
+            "Quotation items must be provided as a list.",
+            reason="invalid_items_structure",
+        )
+    if len(items) == 0:
+        raise QuotationValidationError(
+            "At least one quotation line item is required.",
+            reason="empty_items",
+        )
+    if len(items) > MAX_LINES:
+        raise QuotationValidationError(
+            f"A quotation may contain at most {{MAX_LINES}} lines.",
+            reason="too_many_lines",
+        )
+
+    validated: list[tuple[dict[str, Any], int]] = []
+    seen_skus: set[str] = set()
+    for raw_item in items:
+        if not isinstance(raw_item, dict):
+            raise QuotationValidationError(
+                "Each quotation line must be an object with 'sku' and 'quantity'.",
+                reason="invalid_line_item",
+            )
+        sku = raw_item.get("sku")
+        if not isinstance(sku, str) or not sku.strip():
+            raise QuotationValidationError(
+                "Each quotation line must specify a valid SKU string.",
+                reason="missing_sku",
+            )
+        if sku not in catalogue:
+            raise QuotationValidationError(
+                f"Unknown SKU '{{sku}}'; select an item from the HansePack catalogue.",
+                reason="unknown_sku",
+            )
+        if sku in seen_skus:
+            raise QuotationValidationError(
+                f"Duplicate SKU '{{sku}}'; each SKU may appear at most once per quotation.",
+                reason="duplicate_sku",
+            )
+        seen_skus.add(sku)
+
+        if "quantity" not in raw_item or raw_item["quantity"] is None:
+            raise QuotationValidationError(
+                f"Missing quantity for SKU '{{sku}}'.",
+                reason="missing_quantity",
+            )
+        qty = raw_item["quantity"]
+        if isinstance(qty, bool):
+            raise QuotationValidationError(
+                f"Invalid quantity for SKU '{{sku}}': boolean values are not allowed.",
+                reason="quantity_wrong_type",
+            )
+        if isinstance(qty, float):
+            raise QuotationValidationError(
+                f"Invalid quantity for SKU '{{sku}}': fractional quantities are not allowed.",
+                reason="quantity_not_integer",
+            )
+        if not isinstance(qty, int):
+            raise QuotationValidationError(
+                f"Invalid quantity for SKU '{{sku}}': quantity must be an integer.",
+                reason="quantity_wrong_type",
+            )
+        if qty < MIN_QUANTITY or qty > MAX_QUANTITY:
+            raise QuotationValidationError(
+                f"Invalid quantity {{qty}} for SKU '{{sku}}': quantity must be between {{MIN_QUANTITY}} and {{MAX_QUANTITY}}.",
+                reason="quantity_out_of_range",
+            )
+
+        validated.append((catalogue[sku], qty))
+
+    return validated
+
+
+def calculate_quotation(
+    items: list[dict[str, Any]],
+    *,
+    catalogue_path: str | Path | None = None,
+    rule_version: str = RULE_VERSION,
+) -> dict[str, Any]:
+    """Calculate a deterministic HansePack quotation in integer EUR cents."""
+    if rule_version != RULE_VERSION:
+        raise QuotationValidationError(
+            f"Unsupported rule version '{{rule_version}}'; expected '{{RULE_VERSION}}'.",
+            reason="unsupported_rule_version",
+        )
+
+    catalogue = load_catalogue(catalogue_path)
+    validated_lines = _validate_items(items, catalogue)
+
+    calculated_lines: list[dict[str, Any]] = []
+    for product, quantity in validated_lines:
+        unit_price_cents = int(product["unit_price_cents"])
+        list_amount_cents = quantity * unit_price_cents
+        discount_percent = _discount_percent_for_quantity(quantity)
+        discount_cents = _calculate_rounded_discount_cents(
+            list_amount_cents, discount_percent
+        )
+        net_cents = list_amount_cents - discount_cents
+        calculated_lines.append(
+            {{
+                "sku": str(product["sku"]),
+                "quantity": quantity,
+                "unit_price_cents": unit_price_cents,
+                "list_amount_cents": list_amount_cents,
+                "discount_percent": discount_percent,
+                "discount_cents": discount_cents,
+                "net_cents": net_cents,
+            }}
+        )
+
+    goods_net_cents = sum(line["net_cents"] for line in calculated_lines)
+    shipping_cents = (
+        SHIPPING_FEE_CENTS
+        if goods_net_cents < FREE_SHIPPING_THRESHOLD_CENTS
+        else 0
+    )
+    total_cents = goods_net_cents + shipping_cents
+
+    return {{
+        "currency": CURRENCY,
+        "rule_version": RULE_VERSION,
+        "course_notice": COURSE_NOTICE,
+        "lines": calculated_lines,
+        "goods_net_cents": goods_net_cents,
+        "shipping_cents": shipping_cents,
+        "total_cents": total_cents,
+    }}
+'''
+
+
+_QUOTATION_RULE_CONSTANT_MAP: dict[str, str] = {
+    "rule_version": "RULE_VERSION",
+    "currency": "CURRENCY",
+    "catalogue_path": "CATALOGUE_REL_PATH",
+    "rounding_mode": "ROUNDING_MODE",
+    "min_quantity": "MIN_QUANTITY",
+    "max_quantity": "MAX_QUANTITY",
+    "max_lines": "MAX_LINES",
+    "discount_tier_50_percent": "DISCOUNT_TIER_50_PERCENT",
+    "discount_tier_100_percent": "DISCOUNT_TIER_100_PERCENT",
+    "free_shipping_threshold_cents": "FREE_SHIPPING_THRESHOLD_CENTS",
+    "shipping_fee_cents": "SHIPPING_FEE_CENTS",
+    "course_notice": "COURSE_NOTICE",
+}
+
+
+def validate_rendered_quotation_module_pre_gate(
+    py_code: str,
+    required_content: dict[str, str],
+) -> list[str]:
+    """Deterministic in-memory pre-gate validator for generated Python quotation modules."""
+    findings: list[str] = []
+    if not isinstance(py_code, str) or not py_code.strip():
+        return ["Rendered Python quotation module is empty."]
+
+    if "TODO_FACTORY_GENERATION" in py_code:
+        findings.append("Placeholder 'TODO_FACTORY_GENERATION' still present in module.")
+
+    try:
+        tree = ast.parse(py_code)
+    except SyntaxError as exc:
+        return [f"SyntaxError in generated Python module: {exc}"]
+
+    defined_funcs = {
+        node.name for node in tree.body if isinstance(node, ast.FunctionDef)
+    }
+    defined_classes = {
+        node.name for node in tree.body if isinstance(node, ast.ClassDef)
+    }
+    if "QuotationValidationError" not in defined_classes:
+        findings.append("Missing required class 'QuotationValidationError'.")
+    if "load_catalogue" not in defined_funcs:
+        findings.append("Missing required function 'load_catalogue'.")
+    if "calculate_quotation" not in defined_funcs:
+        findings.append("Missing required function 'calculate_quotation'.")
+
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                if any(
+                    alias.name == bad or alias.name.startswith(f"{bad}.")
+                    for bad in FORBIDDEN_PRODUCT_LLM_IMPORTS
+                ):
+                    findings.append(
+                        f"Forbidden Factory/LLM import '{alias.name}' detected in product code."
+                    )
+        elif isinstance(node, ast.ImportFrom) and node.module:
+            if any(
+                node.module == bad or node.module.startswith(f"{bad}.")
+                for bad in FORBIDDEN_PRODUCT_LLM_IMPORTS
+            ):
+                findings.append(
+                    f"Forbidden Factory/LLM import from '{node.module}' detected in product code."
+                )
+
+    assigned_consts: dict[str, Any] = {}
+    for node in tree.body:
+        if (
+            isinstance(node, ast.Assign)
+            and len(node.targets) == 1
+            and isinstance(node.targets[0], ast.Name)
+        ):
+            try:
+                assigned_consts[node.targets[0].id] = ast.literal_eval(node.value)
+            except Exception:
+                pass
+
+    for key, expected_val in required_content.items():
+        if not expected_val:
+            continue
+        const_name = _QUOTATION_RULE_CONSTANT_MAP.get(key)
+        if const_name and const_name in assigned_consts:
+            if str(assigned_consts[const_name]) != str(expected_val):
+                findings.append(
+                    f"Rule mismatch for '{key}' ({const_name}): expected {expected_val!r}, "
+                    f"got {assigned_consts[const_name]!r}"
+                )
+        elif str(expected_val) not in py_code:
+            findings.append(
+                f"Missing required business rule literal for '{key}': {expected_val!r}"
+            )
 
     return findings
 
@@ -1131,6 +1589,8 @@ def run_customer_delivery_workflow(
     enforce_clean_factory_commit: bool | None = None,
 ) -> CustomerDeliveryWorkflowResult:
     """Execute the multi-agent customer delivery workflow on the external product repo."""
+    resolved_project_id = task.project_id if task is not None else project_id
+    cfg_data: dict[str, Any] = {}
     cfg_acceptance_criteria = [
         "AC-01",
         "AC-02",
@@ -1143,7 +1603,7 @@ def run_customer_delivery_workflow(
     ]
     cfg_session = 5
     try:
-        cfg_data = load_project_config(project_id)
+        cfg_data = load_project_config(resolved_project_id)
         if isinstance(cfg_data.get("acceptance_criteria_in_scope"), list):
             cfg_acceptance_criteria = [
                 str(x) for x in cfg_data["acceptance_criteria_in_scope"]
@@ -1151,14 +1611,30 @@ def run_customer_delivery_workflow(
         if isinstance(cfg_data.get("session"), int):
             cfg_session = int(cfg_data["session"])
     except Exception:
-        pass
+        cfg_data = {}
+
+    customer_name = str(cfg_data.get("customer_name", resolved_project_id))
+    product_github_url = str(cfg_data.get("product_github_url", "")).rstrip("/")
+    if not product_github_url and resolved_project_id == "website-01":
+        product_github_url = "https://github.com/mfadhilahm/client-01-website"
 
     if task is None:
-        task, loaded_req_content = build_task_from_project_config(project_id=project_id)
+        task, loaded_req_content = build_task_from_project_config(
+            project_id=resolved_project_id
+        )
         if required_content is None:
             required_content = loaded_req_content
     elif required_content is None:
-        required_content = dict(DEFAULT_REQUIRED_CONTENT)
+        if resolved_project_id == "website-01":
+            required_content = dict(DEFAULT_REQUIRED_CONTENT)
+        else:
+            try:
+                _, loaded_req_content = build_task_from_project_config(
+                    project_id=resolved_project_id
+                )
+                required_content = loaded_req_content
+            except Exception:
+                required_content = dict(HANSEPACK_S6_REQUIRED_RULES)
 
     is_mock_run = (
         architect_llm is not None
@@ -1225,9 +1701,13 @@ def run_customer_delivery_workflow(
             except Exception:
                 pass
 
-        # F-NEW #1: Check if target_product_file already contains verified R-BASE content
-        verified_baseline = extract_verified_baseline_from_product_html(
-            loaded_files.get(t.target_product_file, "")
+        # F-NEW #1: Check if HTML target_product_file already contains verified R-BASE content
+        verified_baseline = (
+            {}
+            if t.target_product_file.endswith(".py")
+            else extract_verified_baseline_from_product_html(
+                loaded_files.get(t.target_product_file, "")
+            )
         )
         delta_keys: list[str] = []
         baseline_content: dict[str, str] = {}
@@ -1249,8 +1729,8 @@ def run_customer_delivery_workflow(
                 break
 
         system_text = (
-            "You are the Software Architect agent planning customer delivery "
-            "for Nordwerk Industrie-Service. Return ONLY valid JSON with keys: "
+            f"You are the Software Architect agent planning customer delivery "
+            f"for {customer_name} ({t.project_id}). Return ONLY valid JSON with keys: "
             "architecture_decisions (non-empty list of strings), "
             "ready_for_implementation (true), and summary (concise string under 25 words)."
         )
@@ -1258,10 +1738,11 @@ def run_customer_delivery_workflow(
             "/no_think\n"
             f"Project ID: {t.project_id}\n"
             f"Task ID: {t.task_id}\n"
+            f"Task Description: {t.description}\n"
             f"Target File: {t.target_product_file}\n"
             f"Acceptance Criteria: {json.dumps(ac_list)}\n"
             f"Delta Mode Active: {bool(delta_keys)} (delta_keys={delta_keys})\n"
-            f"Required Verbatim Strings:\n{json.dumps(prompt_req_map, ensure_ascii=False, indent=2)}\n"
+            f"Required Verbatim Strings / Business Rules:\n{json.dumps(prompt_req_map, ensure_ascii=False, indent=2)}\n"
             f"Customer Issue Excerpt:\n{first_doc_excerpt}"
         )
         text, usage, llm_error = _invoke_llm(architect_llm, system_text, human_text)
@@ -1316,7 +1797,7 @@ def run_customer_delivery_workflow(
             project_id=t.project_id,
             task_id=t.task_id,
             workflow_id=t.workflow_id,
-            product_repo_path=str(product_root),
+            product_repo_path=t.product_repo_path,
             target_product_file=t.target_product_file,
             acceptance_criteria=ac_list,
             required_content=req_map,
@@ -1390,7 +1871,7 @@ def run_customer_delivery_workflow(
                 project_id=t.project_id,
                 task_id=t.task_id,
                 workflow_id=t.workflow_id,
-                product_repo_path=str(product_root),
+                product_repo_path=t.product_repo_path,
                 modified_files=[],
                 artifact_sha256="",
                 product_test_target=t.product_test_target,
@@ -1426,6 +1907,7 @@ def run_customer_delivery_workflow(
                 "implementation_history": history,
             }
 
+        is_python_quotation = t.target_product_file.endswith(".py")
         use_delta_mode = bool(handover.delta_keys and handover.baseline_content)
         prompt_required_content = (
             {
@@ -1438,14 +1920,24 @@ def run_customer_delivery_workflow(
         )
         expected_keys = list(prompt_required_content.keys())
 
-        system_text = (
-            "You are the Implementation Engineer agent generating the Nordwerk Industrie-Service "
-            "website from the structured ProductHandoverPayload. "
-            "Return ONLY a valid JSON object containing every key from required_content copied "
-            "verbatim, plus a concise 'summary' key (under 15 words) at the end. "
-            "Do not omit any key from required_content and do not invent unrequested claims."
-        )
+        if is_python_quotation:
+            system_text = (
+                f"You are the Implementation Engineer agent generating the {customer_name} "
+                "Python quotation calculation module from the structured ProductHandoverPayload. "
+                "Return ONLY a valid JSON object containing every key from required_content copied "
+                "verbatim with exact values, plus a concise 'summary' key (under 15 words) at the end. "
+                "Do not omit or alter any key from required_content."
+            )
+        else:
+            system_text = (
+                f"You are the Implementation Engineer agent generating the {customer_name} "
+                "website from the structured ProductHandoverPayload. "
+                "Return ONLY a valid JSON object containing every key from required_content copied "
+                "verbatim, plus a concise 'summary' key (under 15 words) at the end. "
+                "Do not omit any key from required_content and do not invent unrequested claims."
+            )
         compact_handover = {
+            "project_id": handover.project_id,
             "task_id": handover.task_id,
             "target_product_file": handover.target_product_file,
             "required_content": prompt_required_content,
@@ -1485,91 +1977,127 @@ def run_customer_delivery_workflow(
         else:
             try:
                 parsed_fields = _extract_json_dict(text)
-                if use_delta_mode and "html_content" not in parsed_fields:
-                    flat_llm_fields: dict[str, Any] = {}
-                    for nested_key in ("required_content", "content"):
-                        if isinstance(parsed_fields.get(nested_key), dict):
-                            flat_llm_fields.update(parsed_fields[nested_key])
-                    flat_llm_fields.update(parsed_fields)
-                    missing_deltas = [
-                        dk
-                        for dk in handover.delta_keys
-                        if not isinstance(flat_llm_fields.get(dk), str)
-                        or not str(flat_llm_fields.get(dk)).strip()
-                    ]
-                    if missing_deltas:
+                if is_python_quotation:
+                    rendered_content = _render_quotation_python_module(parsed_fields)
+                    pre_gate_findings = validate_rendered_quotation_module_pre_gate(
+                        rendered_content,
+                        handover.required_content,
+                    )
+                    if pre_gate_findings:
+                        pre_gate_passed = False
                         raise ValueError(
-                            "LLM implementation output is missing required delta keys "
-                            "(no fallback allowed): " + ", ".join(missing_deltas)
+                            "Pre-gate Python quotation validation failed: "
+                            + "; ".join(pre_gate_findings)
                         )
-                    effective_fields = {
-                        **handover.baseline_content,
-                        **flat_llm_fields,
-                    }
-                else:
-                    effective_fields = parsed_fields
+                    pre_gate_passed = True
 
-                html_content = _render_html_document(effective_fields)
-                has_english_fields = any(
-                    k.startswith("EN_") for k in handover.required_content.keys()
-                ) or any(k.startswith("EN_") for k in effective_fields.keys())
-                en_html_content: str | None = None
-                if has_english_fields and "html_content" not in effective_fields:
-                    en_html_content = _render_english_html_document(effective_fields)
-
-                # F-NEW #2: Deterministic in-memory pre-gate validation before writing/handover
-                pre_gate_findings = validate_rendered_html_pre_gate(
-                    html_content,
-                    handover.required_content,
-                    en_html=en_html_content,
-                )
-                if pre_gate_findings:
-                    pre_gate_passed = False
-                    raise ValueError(
-                        "Pre-gate HTML validation failed: "
-                        + "; ".join(pre_gate_findings)
-                    )
-                pre_gate_passed = True
-
-                written_rel, sha256_hex = write_product_file_tool(
-                    product_root,
-                    t.target_product_file,
-                    html_content,
-                    allowed_write_prefixes=t.allowed_write_prefixes,
-                )
-                modified_files = [written_rel]
-                tools_used = ["write_product_file_tool"]
-
-                diff_chunks = list(
-                    difflib.unified_diff(
-                        state.get("initial_file_snapshot", "").splitlines(keepends=True),
-                        html_content.splitlines(keepends=True),
-                        fromfile=f"a/{written_rel}",
-                        tofile=f"b/{written_rel}",
-                    )
-                )
-
-                if en_html_content is not None:
-                    en_rel, _ = write_product_file_tool(
+                    written_rel, sha256_hex = write_product_file_tool(
                         product_root,
-                        "site/en.html",
-                        en_html_content,
+                        t.target_product_file,
+                        rendered_content,
                         allowed_write_prefixes=t.allowed_write_prefixes,
                     )
-                    if en_rel not in modified_files:
-                        modified_files.append(en_rel)
-                    diff_chunks.extend(
+                    modified_files = [written_rel]
+                    tools_used = ["write_product_file_tool"]
+
+                    diff_chunks = list(
                         difflib.unified_diff(
-                            [],
-                            en_html_content.splitlines(keepends=True),
-                            fromfile="/dev/null",
-                            tofile=f"b/{en_rel}",
+                            state.get("initial_file_snapshot", "").splitlines(
+                                keepends=True
+                            ),
+                            rendered_content.splitlines(keepends=True),
+                            fromfile=f"a/{written_rel}",
+                            tofile=f"b/{written_rel}",
                         )
                     )
+                else:
+                    if use_delta_mode and "html_content" not in parsed_fields:
+                        flat_llm_fields: dict[str, Any] = {}
+                        for nested_key in ("required_content", "content"):
+                            if isinstance(parsed_fields.get(nested_key), dict):
+                                flat_llm_fields.update(parsed_fields[nested_key])
+                        flat_llm_fields.update(parsed_fields)
+                        missing_deltas = [
+                            dk
+                            for dk in handover.delta_keys
+                            if not isinstance(flat_llm_fields.get(dk), str)
+                            or not str(flat_llm_fields.get(dk)).strip()
+                        ]
+                        if missing_deltas:
+                            raise ValueError(
+                                "LLM implementation output is missing required delta keys "
+                                "(no fallback allowed): " + ", ".join(missing_deltas)
+                            )
+                        effective_fields = {
+                            **handover.baseline_content,
+                            **flat_llm_fields,
+                        }
+                    else:
+                        effective_fields = parsed_fields
+
+                    html_content = _render_html_document(effective_fields)
+                    has_english_fields = any(
+                        k.startswith("EN_") for k in handover.required_content.keys()
+                    ) or any(k.startswith("EN_") for k in effective_fields.keys())
+                    en_html_content: str | None = None
+                    if has_english_fields and "html_content" not in effective_fields:
+                        en_html_content = _render_english_html_document(effective_fields)
+
+                    # F-NEW #2: Deterministic in-memory pre-gate validation before writing/handover
+                    pre_gate_findings = validate_rendered_html_pre_gate(
+                        html_content,
+                        handover.required_content,
+                        en_html=en_html_content,
+                    )
+                    if pre_gate_findings:
+                        pre_gate_passed = False
+                        raise ValueError(
+                            "Pre-gate HTML validation failed: "
+                            + "; ".join(pre_gate_findings)
+                        )
+                    pre_gate_passed = True
+
+                    written_rel, sha256_hex = write_product_file_tool(
+                        product_root,
+                        t.target_product_file,
+                        html_content,
+                        allowed_write_prefixes=t.allowed_write_prefixes,
+                    )
+                    modified_files = [written_rel]
+                    tools_used = ["write_product_file_tool"]
+
+                    diff_chunks = list(
+                        difflib.unified_diff(
+                            state.get("initial_file_snapshot", "").splitlines(
+                                keepends=True
+                            ),
+                            html_content.splitlines(keepends=True),
+                            fromfile=f"a/{written_rel}",
+                            tofile=f"b/{written_rel}",
+                        )
+                    )
+
+                    if en_html_content is not None:
+                        en_rel, _ = write_product_file_tool(
+                            product_root,
+                            "site/en.html",
+                            en_html_content,
+                            allowed_write_prefixes=t.allowed_write_prefixes,
+                        )
+                        if en_rel not in modified_files:
+                            modified_files.append(en_rel)
+                        diff_chunks.extend(
+                            difflib.unified_diff(
+                                [],
+                                en_html_content.splitlines(keepends=True),
+                                fromfile="/dev/null",
+                                tofile=f"b/{en_rel}",
+                            )
+                        )
 
                 patch_file = state["run_dir"] / "changes.patch"
                 patch_file.write_text("".join(diff_chunks), encoding="utf-8")
-                patch_path_str = str(patch_file)
+                patch_path_str = _portable_path(patch_file)
                 raw_summary = parsed_fields.get("summary")
                 summary = (
                     raw_summary.strip()
@@ -1597,7 +2125,7 @@ def run_customer_delivery_workflow(
             project_id=t.project_id,
             task_id=t.task_id,
             workflow_id=t.workflow_id,
-            product_repo_path=str(product_root),
+            product_repo_path=t.product_repo_path,
             modified_files=modified_files,
             artifact_sha256=sha256_hex,
             product_test_target=t.product_test_target,
@@ -1690,9 +2218,9 @@ def run_customer_delivery_workflow(
         )
 
         system_text = (
-            "You are the QA & Test Engineer agent verifying the Nordwerk customer product check. "
-            "Return ONLY valid JSON with keys: status, summary, pytest_exit_code, findings, "
-            "human_approval_required (true)."
+            f"You are the QA & Test Engineer agent verifying the {customer_name} ({t.project_id}) "
+            "customer product check. Return ONLY valid JSON with keys: status, summary, "
+            "pytest_exit_code, findings, human_approval_required (true)."
         )
         human_text = (
             "/no_think\n"
@@ -1766,7 +2294,7 @@ def run_customer_delivery_workflow(
             human_approval_required=True,
             summary_status=summary_status,
             run_id=step_run_id,
-            trace_path=state["trace_file"],
+            trace_path=_portable_path(Path(state["trace_file"])),
             tool_status="completed",
         )
 
@@ -1938,7 +2466,7 @@ def run_customer_delivery_workflow(
         else "mock",
         "test_commands": [
             "python -m pytest -q",
-            f"python -m pytest {task.product_test_target} -q (in ../client-01-website)",
+            f"python -m pytest {task.product_test_target} -q (in {task.product_repo_path})",
         ],
         "product_test_passed": (
             latest_imp.status == "completed" and latest_qa.status == "passed"
@@ -1949,9 +2477,9 @@ def run_customer_delivery_workflow(
         "review_file": _portable_path(run_dir / "review.json"),
         "artifact_hashes": artifact_hashes,
         "issue_and_pr_references": [
-            f"https://github.com/mfadhilahm/client-01-website/blob/{product_input_commit}/{inp}"
-            if product_input_commit != "unknown"
-            else f"../client-01-website/{inp}"
+            f"{product_github_url}/blob/{product_input_commit}/{inp}"
+            if product_github_url and product_input_commit != "unknown"
+            else f"{task.product_repo_path}/{inp}"
             for inp in task.input_files
             if inp.startswith("docs/")
         ],
