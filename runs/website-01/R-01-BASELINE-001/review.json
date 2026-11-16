@@ -5,16 +5,18 @@
   "decision": "approved",
   "reviewer": "muhammad",
   "decided_at_utc": "2026-11-02T10:24:12.890745+00:00",
-  "tested_source_commit": "ecb598140d0b2d0778d891f9bc1acc8c36295a93",
+  "tested_source_commit": "uncommitted_worktree",
   "product_input_commit": "ecb598140d0b2d0778d891f9bc1acc8c36295a93",
+  "product_worktree_state": "uncommitted_worktree (isolated_experiment_not_committed)",
+  "subsequent_product_commit": null,
   "reviewed_artifact_hashes": {
     "site/index.html": "0b05ef0b38da40af99b26c81783a5eab1f97d4012190fa98ac455d6f75a79720"
   },
-  "report_path": "C:\\Hochschule\\Module\\Semester 5\\Agentic AI\\agentic_ai_haw_2627\\runs\\website-01\\R-01-BASELINE-001\\workflow-report.json",
-  "report_sha256": "7375b7415b111e15f3e06742f43331e49f81db4b76d259ea6a41505047f45226",
+  "report_path": "runs/website-01/R-01-BASELINE-001/workflow-report.json",
+  "report_sha256": "631db423923296377edb0e2626d74dce35f73acece0421f401a53df89d6251f2",
   "test_evidence_paths": [
-    "C:\\Hochschule\\Module\\Semester 5\\Agentic AI\\agentic_ai_haw_2627\\runs\\website-01\\R-01-BASELINE-001\\trace.jsonl",
-    "C:\\Hochschule\\Module\\Semester 5\\Agentic AI\\agentic_ai_haw_2627\\runs\\website-01\\R-01-BASELINE-001\\manifest.json"
+    "runs/website-01/R-01-BASELINE-001/trace.jsonl",
+    "runs/website-01/R-01-BASELINE-001/manifest.json"
   ],
   "accepted_criteria": [
     "AC-01",

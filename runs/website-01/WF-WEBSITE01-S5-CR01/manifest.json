@@ -1,0 +1,46 @@
+{
+  "company": "HAW Agentic Software Factory",
+  "session": 5,
+  "project_id": "website-01",
+  "customer_task_id": "NW-S5-CR01",
+  "team_size": 6,
+  "factory_commit": "5f3b49e215f1b9e60c487c7015d26e7c68372107",
+  "factory_commit_clean": true,
+  "factory_dirty_files": [],
+  "workflow_code_sha256": "b5df5d710251e0bfdb35af8a8b14fcd4e791f99d2c62aecc803f3c310ca2a883",
+  "product_input_commit": "c3866e164d89a19bc83557058318319765b339b3",
+  "product_worktree_state": "committed_after_review",
+  "product_output_commit": "uncommitted_worktree",
+  "subsequent_product_commit": "84d5baf9fcfebd9b1c4772e63fcd6b92d70fc53f",
+  "workflow_ids": [
+    "WF-WEBSITE01-S5-CR01"
+  ],
+  "run_ids": [
+    "6fa3d659-26cc-4ebe-aeae-1120b973230f",
+    "670390c0-5806-4414-9e4e-c0e865a96a06",
+    "390e1270-f912-4919-bc3f-32c7d19bf16c",
+    "cbcfecf4-ded3-4700-bd1b-48404d5529d4",
+    "ec9d30b1-8642-4b5d-bf4b-d9ad1a78f8f6"
+  ],
+  "llm_provider": "ollama",
+  "llm_model": "qwen3:4b",
+  "model_tag_or_digest": "qwen3:4b@359d7dd4bcda",
+  "test_commands": [
+    "python -m pytest -q",
+    "python -m pytest tests/test_website_s5.py -q (in ../client-01-website)"
+  ],
+  "product_test_passed": true,
+  "iterations_used": 2,
+  "max_correction_loops": 2,
+  "mock_runs_are_separate": false,
+  "review_file": "runs/website-01/WF-WEBSITE01-S5-CR01/review.json",
+  "artifact_hashes": {
+    "site/index.html": "6ebd91ed30ef6b1d200103d827af3ad768ff3c1ad08c7736e1992c6a8a73d721",
+    "site/en.html": "8b43eaa3e36e915b959c944f3a5445de5cd2aaf165b52d21c99ca920edd527b8"
+  },
+  "issue_and_pr_references": [
+    "https://github.com/mfadhilahm/client-01-website/blob/c3866e164d89a19bc83557058318319765b339b3/docs/issue-03-session-05-cr01.md"
+  ],
+  "cost_records": "costs/usage.csv",
+  "total_estimated_agent_credits": 5.411
+}

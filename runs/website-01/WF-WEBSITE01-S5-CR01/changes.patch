@@ -1,0 +1,136 @@
+--- a/site/index.html
++++ b/site/index.html
+@@ -22,6 +22,8 @@
+         <li><a href="#zielgruppen">Zielgruppen</a></li>
+         <li><a href="#arbeitsweise">Arbeitsweise</a></li>
+         <li><a href="#kontakt">Kontakt</a></li>
++        <li><a href="#en" lang="en">EN</a></li>
++        <li><a class="lang-switch" href="en.html" lang="en" hreflang="en">English (EN)</a></li>
+         </ul>
+       </nav>
+     </div>
+@@ -59,12 +61,34 @@
+       <ul class="target-group-list">
+         <li class="target-group-item">Kleine Produktionsbetriebe</li>
+         <li class="target-group-item">Technische Serviceunternehmen</li>
++        <li class="target-group-item">Technische Einkaufsabteilungen</li>
+       </ul>
+     </section>
+ 
+     <section class="working-approach" id="arbeitsweise" aria-labelledby="arbeitsweise-heading">
+       <h2 id="arbeitsweise-heading">Unsere Arbeitsweise</h2>
+       <p class="approach-statement">Ein fester Ansprechpartner, ein gemeinsam vereinbarter Leistungsumfang und nachvollziehbare Ergebnisse.</p>
++    </section>
++
++    <section class="english-view" id="en" lang="en" aria-labelledby="en-heading">
++      <div class="en-header-row">
++        <h2 id="en-heading">Nordwerk Industrie-Service – English Overview</h2>
++        <a class="lang-switch" href="en.html" hreflang="en">English entry page (en.html)</a>
++      </div>
++      <p class="lead">Practical support for your technical operations.</p>
++      <h3>Services Overview</h3>
++      <ul class="target-group-list">
++        <li class="en-service-item">Maintenance planning</li>
++        <li class="en-service-item">Spare parts coordination</li>
++        <li class="en-service-item">Operational documentation</li>
++      </ul>
++      <h3>International &amp; Technical Purchasing</h3>
++      <p>We support small manufacturing companies, technical service providers, and <strong>Technical purchasing departments</strong>.</p>
++      <p class="hero-actions">
++        <a class="cta-link" href="mailto:kontakt@nordwerk.example">Request information</a>
++        <a class="lang-switch" href="#start" lang="de">Deutsch (DE)</a>
++      </p>
++      <p class="en-notice" role="note">Fictional company – HAW Hamburg course project. No real offers or contact.</p>
+     </section>
+ 
+     <section class="contact" id="kontakt" aria-labelledby="kontakt-heading">
+--- /dev/null
++++ b/site/en.html
+@@ -0,0 +1,87 @@
++<!DOCTYPE html>
++<html lang="en">
++<head>
++  <meta charset="UTF-8">
++  <meta name="viewport" content="width=device-width, initial-scale=1.0">
++  <title>Nordwerk Industrie-Service – Practical support for your technical operations.</title>
++  <link rel="stylesheet" href="styles.css">
++</head>
++<body>
++  <a class="skip-link" href="#main-content">Skip to main content</a>
++
++  <div class="course-notice" role="note" aria-label="Course project notice">
++    Fictional company – HAW Hamburg course project. No real offers or contact.
++  </div>
++
++  <header class="site-header">
++    <div class="container header-inner">
++      <span class="brand-name">Nordwerk Industrie-Service</span>
++      <nav class="site-nav" aria-label="Primary navigation">
++        <ul class="nav-list">
++        <li><a href="#services">Services</a></li>
++        <li><a href="#target-groups">Target Groups</a></li>
++        <li><a href="#approach">Working Approach</a></li>
++        <li><a href="#contact">Contact</a></li>
++        <li><a class="lang-switch" href="index.html" lang="de" hreflang="de">Deutsch (DE)</a></li>
++        </ul>
++      </nav>
++    </div>
++  </header>
++
++  <main class="container" id="main-content">
++    <section class="hero" id="top" aria-labelledby="hero-heading">
++      <h1 id="hero-heading">Nordwerk Industrie-Service</h1>
++      <p class="lead">Practical support for your technical operations.</p>
++      <p class="hero-actions">
++        <a class="cta-link" href="mailto:kontakt@nordwerk.example">Request information</a>
++        <a class="lang-switch" href="index.html" lang="de" hreflang="de">Zur deutschen Version (DE)</a>
++      </p>
++    </section>
++
++    <section class="services" id="services" aria-labelledby="services-heading">
++      <h2 id="services-heading">Services Overview</h2>
++      <div class="service-grid">
++      <article class="service-card">
++        <h3>Maintenance planning</h3>
++        <p>Structured maintenance tasks and clear responsibilities for technical operations.</p>
++      </article>
++      <article class="service-card">
++        <h3>Spare parts coordination</h3>
++        <p>Coordinated spare parts requirements and supplier delivery schedules.</p>
++      </article>
++      <article class="service-card">
++        <h3>Operational documentation</h3>
++        <p>Traceable and practical structure for your operational documentation.</p>
++      </article>
++      </div>
++    </section>
++
++    <section class="target-groups" id="target-groups" aria-labelledby="target-groups-heading">
++      <h2 id="target-groups-heading">Who We Work For</h2>
++      <p>Our practical support is tailored to:</p>
++      <ul class="target-group-list">
++        <li class="target-group-item">Small manufacturing companies</li>
++        <li class="target-group-item">Technical service companies</li>
++        <li class="target-group-item">Technical purchasing departments</li>
++      </ul>
++    </section>
++
++    <section class="working-approach" id="approach" aria-labelledby="approach-heading">
++      <h2 id="approach-heading">How We Work</h2>
++      <p class="approach-statement">A dedicated point of contact, a jointly agreed scope of services, and traceable results.</p>
++    </section>
++
++    <section class="contact" id="contact" aria-labelledby="contact-heading">
++      <h2 id="contact-heading">Contact</h2>
++      <p>Would you like to request non-binding information for international enquiries or technical purchasing? Contact us directly by email:</p>
++      <a class="cta-link" href="mailto:kontakt@nordwerk.example">Request information</a>
++    </section>
++  </main>
++
++  <footer class="site-footer">
++    <div class="container">
++      <p>&copy; 2026 Nordwerk Industrie-Service · Hamburg · <a href="index.html" lang="de" hreflang="de">Deutsch (DE)</a></p>
++    </div>
++  </footer>
++</body>
++</html>

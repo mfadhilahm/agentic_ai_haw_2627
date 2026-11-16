@@ -9,7 +9,7 @@
   "factory_dirty_files": [],
   "workflow_code_sha256": "f2b9d3d00df0a1d4020175e7ee9af1d93aba1689c818eb9dc30af3da2fe89ecf",
   "product_input_commit": "ecb598140d0b2d0778d891f9bc1acc8c36295a93",
-  "product_output_commit": "ecb598140d0b2d0778d891f9bc1acc8c36295a93",
+  "product_output_commit": "uncommitted_worktree",
   "workflow_ids": [
     "R-01-BASELINE-001"
   ],
@@ -23,19 +23,21 @@
   "model_tag_or_digest": "qwen3:4b@359d7dd4bcda",
   "test_commands": [
     "python -m pytest -q",
-    "python -m pytest tests/verify_r01_baseline.py -q (in C:\\Users\\Muham\\AppData\\Local\\Temp\\nordwerk_r01_a9mfbfb5\\client-01-website)"
+    "python -m pytest tests/verify_r01_baseline.py -q (in isolated checkout of R-BASE ecb5981)"
   ],
   "product_test_passed": true,
   "iterations_used": 1,
   "max_correction_loops": 2,
   "mock_runs_are_separate": false,
-  "review_file": "C:\\Hochschule\\Module\\Semester 5\\Agentic AI\\agentic_ai_haw_2627\\runs\\website-01\\R-01-BASELINE-001\\review.json",
+  "review_file": "runs/website-01/R-01-BASELINE-001/review.json",
   "artifact_hashes": {
     "site/index.html": "0b05ef0b38da40af99b26c81783a5eab1f97d4012190fa98ac455d6f75a79720"
   },
   "issue_and_pr_references": [
-    "C:\\Users\\Muham\\AppData\\Local\\Temp\\nordwerk_r01_a9mfbfb5\\client-01-website/docs/issue-02-session-04.md"
+    "https://github.com/mfadhilahm/client-01-website/blob/ecb598140d0b2d0778d891f9bc1acc8c36295a93/docs/issue-02-session-04.md"
   ],
   "cost_records": "costs/usage.csv",
-  "total_estimated_agent_credits": 5.4166
+  "total_estimated_agent_credits": 5.4166,
+  "product_worktree_state": "uncommitted_worktree (isolated_experiment_not_committed)",
+  "subsequent_product_commit": null
 }

@@ -375,3 +375,97 @@ def test_r01_baseline_task_configuration_and_4_service_rendering() -> None:
         in html
     )
     assert html.count('<article class="service-card">') == 4
+
+
+def test_session_04_feedback_usage_csv_and_worktree_commit_distinction(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Session 4 Feedback Fixes:
+    1. Verify costs/usage.csv has no unquoted commas (exact 8 columns per row) and records 4 CI runs on 2026-11-02.
+    2. Verify uncommitted worktree changes are distinguished from subsequent product commits and no local C:\\ paths leak into run manifests/reports/reviews.
+    """
+    import csv
+
+    repo_root = Path(__file__).resolve().parents[1]
+    usage_csv = repo_root / "costs" / "usage.csv"
+    with usage_csv.open(newline="", encoding="utf-8-sig") as handle:
+        raw_rows = list(csv.reader(handle))
+    assert raw_rows[0] == [
+        "date",
+        "task_id",
+        "actor_type",
+        "actor",
+        "quantity",
+        "unit",
+        "credits",
+        "notes",
+    ]
+    for idx, r in enumerate(raw_rows[1:], start=2):
+        assert len(r) == 8, f"Row {idx} in costs/usage.csv has {len(r)} columns (unquoted comma): {r}"
+
+    with usage_csv.open(newline="", encoding="utf-8-sig") as handle:
+        dict_rows = list(csv.DictReader(handle))
+    assert all(None not in row for row in dict_rows)
+    s4_ci_rows = [
+        r
+        for r in dict_rows
+        if r["date"] == "2026-11-02" and r["actor_type"] == "ci"
+    ]
+    assert len(s4_ci_rows) == 1
+    assert float(s4_ci_rows[0]["quantity"]) == 4.0
+    assert float(s4_ci_rows[0]["credits"]) == 4.0
+
+    # Verify uncommitted worktree vs subsequent product commit distinction
+    product_dir = _create_s4_temp_product_checkout(tmp_path)
+    runs_dir = tmp_path / "runs"
+    monkeypatch.setattr(
+        "src.agents.customer_delivery_workflow._git_head_commit",
+        lambda repo_dir: "473865222ef23e1348046b3b06af759b2182515f"
+        if Path(repo_dir).resolve() == product_dir.resolve()
+        else "54a626b18e0ce4a58142468a820e4626bd536de0",
+    )
+    task = CustomerDeliveryTask(
+        task_id="NW-S4-WORKTREE-TEST",
+        workflow_id="WF-S4-WORKTREE-TEST",
+        project_id="website-01",
+        product_repo_path=str(product_dir),
+        product_test_target="tests/test_website_s4.py",
+    )
+    res = run_customer_delivery_workflow(
+        task,
+        required_content=dict(SESSION_04_REQUIRED_CONTENT),
+        architect_llm=FakeS4ArchitectLLM(),
+        implementation_llm=FakeS4ValidImplementationLLM(),
+        qa_llm=FakeS4QALLM(),
+        runs_root=runs_dir,
+    )
+    assert res.product_input_commit == "473865222ef23e1348046b3b06af759b2182515f"
+    assert res.product_worktree_state == "uncommitted_worktree"
+    assert res.product_output_commit == "uncommitted_worktree"
+    assert res.subsequent_product_commit is None
+
+    # Reviewing with a subsequent committed product SHA records committed_after_review
+    report_path = Path(res.run_directory) / "workflow-report.json"
+    rev_path = record_customer_human_review(
+        report_path,
+        reviewer="saad",
+        decision="approved",
+        tested_source_commit="ecb598140d0b2d0778d891f9bc1acc8c36295a93",
+        rationale="Approved and subsequently committed as R-BASE.",
+    )
+    rev_data = json.loads(rev_path.read_text(encoding="utf-8"))
+    assert rev_data["product_input_commit"] == "473865222ef23e1348046b3b06af759b2182515f"
+    assert rev_data["product_worktree_state"] == "committed_after_review"
+    assert rev_data["subsequent_product_commit"] == "ecb598140d0b2d0778d891f9bc1acc8c36295a93"
+    assert rev_data["tested_source_commit"] == "ecb598140d0b2d0778d891f9bc1acc8c36295a93"
+
+    # Verify stored runs under runs/website-01/ have no machine-local paths
+    for wf_dir in (repo_root / "runs" / "website-01").iterdir():
+        if not wf_dir.is_dir():
+            continue
+        for fname in ("manifest.json", "workflow-report.json", "review.json"):
+            fpath = wf_dir / fname
+            if fpath.is_file():
+                raw_text = fpath.read_text(encoding="utf-8")
+                assert "C:\\\\" not in raw_text, f"Local Windows path found in {fpath}"
+
