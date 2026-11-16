@@ -1743,7 +1743,9 @@ def run_customer_delivery_workflow(
             f"Acceptance Criteria: {json.dumps(ac_list)}\n"
             f"Delta Mode Active: {bool(delta_keys)} (delta_keys={delta_keys})\n"
             f"Required Verbatim Strings / Business Rules:\n{json.dumps(prompt_req_map, ensure_ascii=False, indent=2)}\n"
-            f"Customer Issue Excerpt:\n{first_doc_excerpt}"
+            f"Customer Issue Excerpt:\n{first_doc_excerpt}\n\n"
+            "Respond ONLY with JSON keys: architecture_decisions (non-empty list of strings), "
+            "ready_for_implementation (true), summary (string under 25 words)."
         )
         text, usage, llm_error = _invoke_llm(architect_llm, system_text, human_text)
         duration = time.perf_counter() - started
@@ -1948,6 +1950,11 @@ def run_customer_delivery_workflow(
             f"Iteration: {iteration} of {t.max_correction_loops}\n"
             f"Handover Contract:\n{json.dumps(compact_handover, ensure_ascii=False, indent=2)}\n"
         )
+        if is_python_quotation:
+            human_text += (
+                '\nRespond ONLY with a flat JSON object containing every key in '
+                'required_json_keys copied verbatim from required_content, plus a concise "summary" string.\n'
+            )
         if feedback:
             human_text += f"\nPrevious QA/Validation Failure Feedback to Fix:\n{feedback}\n"
 

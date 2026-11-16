@@ -1,0 +1,27 @@
+{
+  "task_id": "HP-S6-001",
+  "project_id": "quotation-02",
+  "workflow_id": "WF-QUOTATION02-S6-001",
+  "decision": "changes_requested",
+  "reviewer": "minh",
+  "decided_at_utc": "2026-11-16T10:26:16.662191+00:00",
+  "tested_source_commit": "uncommitted_worktree",
+  "product_input_commit": "a167bf3cc96fc8ce00c43c55c17a616a113f9290",
+  "product_worktree_state": "uncommitted_worktree (rejected_not_committed)",
+  "subsequent_product_commit": null,
+  "reviewed_artifact_hashes": {},
+  "report_path": "runs/quotation-02/WF-QUOTATION02-S6-001/workflow-report.json",
+  "report_sha256": "4fed01b00296b3f04608916180c5df30fe821e2636a107cf313664a4d508a0d9",
+  "test_evidence_paths": [
+    "runs/quotation-02/WF-QUOTATION02-S6-001/trace.jsonl",
+    "runs/quotation-02/WF-QUOTATION02-S6-001/manifest.json"
+  ],
+  "accepted_criteria": [],
+  "open_criteria": [
+    "HP-AC01",
+    "HP-AC02 (Q01, Q03)",
+    "HP-AC04 (E01)"
+  ],
+  "rationale": "Rejected failed run WF-QUOTATION02-S6-001: qwen3:4b echoed required_content keys in architect_node instead of architecture_decisions/summary, causing implementation skip and QA failure (exit_code=1).",
+  "identity_assurance": "self_declared_course_review"
+}

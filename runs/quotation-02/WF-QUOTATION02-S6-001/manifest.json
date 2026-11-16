@@ -1,0 +1,40 @@
+{
+  "company": "HAW Agentic Software Factory",
+  "session": 6,
+  "project_id": "quotation-02",
+  "customer_task_id": "HP-S6-001",
+  "team_size": 6,
+  "factory_commit": "5270442050faf64484ae7d053a3213c091bc187f",
+  "factory_commit_clean": true,
+  "factory_dirty_files": [],
+  "workflow_code_sha256": "b3b9389ecc164ac76f192711dcfcb921b6bbb13e2ea52d20d7c1d7c91d88849b",
+  "product_input_commit": "a167bf3cc96fc8ce00c43c55c17a616a113f9290",
+  "product_worktree_state": "uncommitted_worktree (rejected_not_committed)",
+  "product_output_commit": "a167bf3cc96fc8ce00c43c55c17a616a113f9290",
+  "subsequent_product_commit": null,
+  "workflow_ids": [
+    "WF-QUOTATION02-S6-001"
+  ],
+  "run_ids": [
+    "0f9f2778-2f54-4e00-bfe3-f1c2dd2dc3d3",
+    "faf6a063-a2a6-4bcb-9846-3ce1734fe2fc"
+  ],
+  "llm_provider": "ollama",
+  "llm_model": "qwen3:4b",
+  "model_tag_or_digest": "qwen3:4b@359d7dd4bcda",
+  "test_commands": [
+    "python -m pytest -q",
+    "python -m pytest tests/test_quotation_s6.py -q (in ../client-02-quotation)"
+  ],
+  "product_test_passed": false,
+  "iterations_used": 1,
+  "max_correction_loops": 2,
+  "mock_runs_are_separate": false,
+  "review_file": "runs/quotation-02/WF-QUOTATION02-S6-001/review.json",
+  "artifact_hashes": {},
+  "issue_and_pr_references": [
+    "https://github.com/minhnyn/client-02-quotation/blob/a167bf3cc96fc8ce00c43c55c17a616a113f9290/docs/issue-01-session-06.md"
+  ],
+  "cost_records": "costs/usage.csv",
+  "total_estimated_agent_credits": 3.7552
+}
