@@ -42,7 +42,7 @@ def get_chat_model(
     if settings.llm_provider == "openai_compatible":
         # Many self-hosted OpenAI-compatible services support Chat Completions
         # but not the OpenAI Responses API. Keep the starter on the common path.
-        return ChatOpenAI(
+        chat_model = ChatOpenAI(
             model=settings.llm_model,
             base_url=settings.llm_base_url,
             api_key=settings.llm_api_key or "not-required",
@@ -53,6 +53,9 @@ def get_chat_model(
             stream_usage=False,
             use_responses_api=False,
         )
+        if json_mode:
+            return chat_model.bind(response_format={"type": "json_object"})
+        return chat_model
 
     raise ValueError(f"Unsupported LLM provider: {settings.llm_provider}")
 

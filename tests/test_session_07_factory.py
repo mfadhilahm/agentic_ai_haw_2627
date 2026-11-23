@@ -62,15 +62,14 @@ def _create_s7_temp_hansepack_checkout(tmp_path: Path, dirname: str = "client-02
     (product_dir / "tests").mkdir(parents=True, exist_ok=True)
 
     task_fixtures_dir = REPO_ROOT / "task sheets" / "session-06-08"
-    shutil.copyfile(
-        task_fixtures_dir / "HansePack_Katalog.json",
-        product_dir / "data" / "HansePack_Katalog.json",
-    )
-    shutil.copyfile(
-        task_fixtures_dir / "HansePack_Referenzfaelle.json",
-        product_dir / "data" / "HansePack_Referenzfaelle.json",
-    )
+    for fixture_name in ("HansePack_Katalog.json", "HansePack_Referenzfaelle.json"):
+        raw_bytes = (task_fixtures_dir / fixture_name).read_bytes().replace(b"\r\n", b"\n")
+        (product_dir / "data" / fixture_name).write_bytes(raw_bytes)
 
+    (product_dir / "pytest.ini").write_text(
+        "[pytest]\npythonpath = .\ntestpaths = tests\n",
+        encoding="utf-8",
+    )
     (product_dir / "docs" / "issue-01-session-06.md").write_text(
         "# Issue #2: [HP-S7-001] HansePack Session 7 Full HP-V1 Quotation & JSON Export\n"
         "Scope: HP-AC01..HP-AC07 (Q01-Q14, E01-E10, web UI & JSON export).\n",

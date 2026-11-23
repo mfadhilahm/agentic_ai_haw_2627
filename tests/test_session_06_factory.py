@@ -115,17 +115,16 @@ def _create_s6_temp_hansepack_checkout(tmp_path: Path) -> Path:
     (product_dir / "quotation").mkdir(parents=True, exist_ok=True)
     (product_dir / "tests").mkdir(parents=True, exist_ok=True)
 
-    # Copy binding customer fixtures from the task sheets directory in REPO_ROOT
+    # Copy binding customer fixtures from the task sheets directory in REPO_ROOT (normalized to LF for exact SHA-256)
     task_fixtures_dir = REPO_ROOT / "task sheets" / "session-06-08"
-    shutil.copyfile(
-        task_fixtures_dir / "HansePack_Katalog.json",
-        product_dir / "data" / "HansePack_Katalog.json",
-    )
-    shutil.copyfile(
-        task_fixtures_dir / "HansePack_Referenzfaelle.json",
-        product_dir / "data" / "HansePack_Referenzfaelle.json",
-    )
+    for fixture_name in ("HansePack_Katalog.json", "HansePack_Referenzfaelle.json"):
+        raw_bytes = (task_fixtures_dir / fixture_name).read_bytes().replace(b"\r\n", b"\n")
+        (product_dir / "data" / fixture_name).write_bytes(raw_bytes)
 
+    (product_dir / "pytest.ini").write_text(
+        "[pytest]\npythonpath = .\ntestpaths = tests\n",
+        encoding="utf-8",
+    )
     (product_dir / "docs" / "issue-01-session-06.md").write_text(
         "# Issue #1: [HP-S6-001] HansePack Session 6 Quotation Slice\n"
         "Scope: HP-AC01, HP-AC02 (Q01, Q03), HP-AC04 (E01).\n",
