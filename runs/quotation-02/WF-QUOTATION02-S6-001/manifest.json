@@ -33,8 +33,16 @@
   "review_file": "runs/quotation-02/WF-QUOTATION02-S6-001/review.json",
   "artifact_hashes": {},
   "issue_and_pr_references": [
+    "https://github.com/minhnyn/client-02-quotation/issues/1",
+    "https://github.com/mfadhilahm/agentic_ai_haw_2627/issues/4",
     "https://github.com/minhnyn/client-02-quotation/blob/a167bf3cc96fc8ce00c43c55c17a616a113f9290/docs/issue-01-session-06.md"
   ],
   "cost_records": "costs/usage.csv",
-  "total_estimated_agent_credits": 3.7552
+  "total_estimated_agent_credits": 3.7552,
+  "llm_settings": {
+    "temperature": 0.0,
+    "reasoning": false,
+    "json_mode": true,
+    "min_output_tokens": 1024
+  }
 }

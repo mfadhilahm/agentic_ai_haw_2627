@@ -437,12 +437,50 @@ def validate_rendered_html_pre_gate(
     return findings
 
 
-def _validate_and_normalize_quotation_fields(
-    fields: dict[str, Any],
-) -> dict[str, Any]:
-    """Validate structured LLM output fields for a deterministic Python quotation module.
+DEFAULT_PYTHON_MODULE_CONTRACT: dict[str, Any] = {
+    "module_template_path": "config/projects/templates/quotation_02_calculator.py.tpl",
+    "required_classes": ["QuotationValidationError"],
+    "required_functions": ["load_catalogue", "calculate_quotation"],
+    "integer_rule_keys": {
+        "min_quantity": 1,
+        "max_quantity": 1,
+        "max_lines": 1,
+        "discount_tier_50_percent": 0,
+        "discount_tier_100_percent": 0,
+        "free_shipping_threshold_cents": 0,
+        "shipping_fee_cents": 0,
+    },
+    "enum_rule_keys": {
+        "rounding_mode": ["ROUND_HALF_UP"],
+    },
+    "max_gte_min_pairs": [
+        ["max_quantity", "min_quantity"],
+    ],
+    "rule_constant_map": {
+        "rule_version": "RULE_VERSION",
+        "currency": "CURRENCY",
+        "catalogue_path": "CATALOGUE_REL_PATH",
+        "rounding_mode": "ROUNDING_MODE",
+        "min_quantity": "MIN_QUANTITY",
+        "max_quantity": "MAX_QUANTITY",
+        "max_lines": "MAX_LINES",
+        "discount_tier_50_percent": "DISCOUNT_TIER_50_PERCENT",
+        "discount_tier_100_percent": "DISCOUNT_TIER_100_PERCENT",
+        "free_shipping_threshold_cents": "FREE_SHIPPING_THRESHOLD_CENTS",
+        "shipping_fee_cents": "SHIPPING_FEE_CENTS",
+        "course_notice": "COURSE_NOTICE",
+    },
+}
 
-    Raises ValueError if the LLM response is empty or missing required business rules,
+
+def validate_and_normalize_python_contract_fields(
+    fields: dict[str, Any],
+    required_content: dict[str, str] | None = None,
+    contract: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Generic config-driven validator for structured LLM output fields of a Python module.
+
+    Raises ValueError if the LLM response is empty or missing required contract keys,
     preventing failed or partial LLM calls from being masked by default logic.
     """
     if not isinstance(fields, dict) or not fields:
@@ -450,6 +488,25 @@ def _validate_and_normalize_quotation_fields(
 
     if isinstance(fields.get("python_code"), str) and fields["python_code"].strip():
         return {"python_code": fields["python_code"].strip()}
+
+    effective_contract = contract if isinstance(contract, dict) else DEFAULT_PYTHON_MODULE_CONTRACT
+    int_keys: dict[str, int] = {
+        str(k): int(v)
+        for k, v in (effective_contract.get("integer_rule_keys") or {}).items()
+    }
+    enum_keys: dict[str, list[str]] = {
+        str(k): [str(x) for x in v]
+        for k, v in (effective_contract.get("enum_rule_keys") or {}).items()
+        if isinstance(v, list)
+    }
+    max_gte_min_pairs: list[tuple[str, str]] = [
+        (str(pair[0]), str(pair[1]))
+        for pair in (effective_contract.get("max_gte_min_pairs") or [])
+        if isinstance(pair, (list, tuple)) and len(pair) == 2
+    ]
+    expected_keys = list(
+        (required_content or HANSEPACK_S6_REQUIRED_RULES).keys()
+    )
 
     merged: dict[str, Any] = {}
     for nested_key in ("required_content", "content", "rules"):
@@ -478,44 +535,40 @@ def _validate_and_normalize_quotation_fields(
             return parsed_int if parsed_int >= min_val else None
         return None
 
-    rule_version = _clean_str("rule_version")
-    currency = _clean_str("currency")
-    catalogue_path = _clean_str("catalogue_path")
-    rounding_mode = _clean_str("rounding_mode")
-    course_notice = _clean_str("course_notice")
-    min_quantity = _clean_int("min_quantity", min_val=1)
-    max_quantity = _clean_int("max_quantity", min_val=1)
-    max_lines = _clean_int("max_lines", min_val=1)
-    discount_tier_50_percent = _clean_int("discount_tier_50_percent", min_val=0)
-    discount_tier_100_percent = _clean_int("discount_tier_100_percent", min_val=0)
-    free_shipping_threshold_cents = _clean_int("free_shipping_threshold_cents", min_val=0)
-    shipping_fee_cents = _clean_int("shipping_fee_cents", min_val=0)
-
+    normalized: dict[str, Any] = {}
     missing: list[str] = []
-    if not rule_version:
-        missing.append("rule_version")
-    if not currency:
-        missing.append("currency")
-    if not catalogue_path:
-        missing.append("catalogue_path")
-    if rounding_mode != "ROUND_HALF_UP":
-        missing.append("rounding_mode (ROUND_HALF_UP)")
-    if min_quantity is None:
-        missing.append("min_quantity")
-    if max_quantity is None or (min_quantity is not None and max_quantity < min_quantity):
-        missing.append("max_quantity")
-    if max_lines is None:
-        missing.append("max_lines")
-    if discount_tier_50_percent is None:
-        missing.append("discount_tier_50_percent")
-    if discount_tier_100_percent is None:
-        missing.append("discount_tier_100_percent")
-    if free_shipping_threshold_cents is None:
-        missing.append("free_shipping_threshold_cents")
-    if shipping_fee_cents is None:
-        missing.append("shipping_fee_cents")
-    if not course_notice:
-        missing.append("course_notice")
+
+    for key in expected_keys:
+        if key in int_keys:
+            parsed_val = _clean_int(key, min_val=int_keys[key])
+            if parsed_val is None:
+                missing.append(key)
+            else:
+                normalized[key] = parsed_val
+        elif key in enum_keys:
+            allowed_vals = enum_keys[key]
+            s_val = _clean_str(key)
+            if s_val not in allowed_vals:
+                missing.append(f"{key} ({'/'.join(allowed_vals)})")
+            else:
+                normalized[key] = s_val
+        else:
+            s_val = _clean_str(key)
+            if not s_val:
+                missing.append(key)
+            else:
+                normalized[key] = s_val
+
+    for max_key, min_key in max_gte_min_pairs:
+        max_v = normalized.get(max_key)
+        min_v = normalized.get(min_key)
+        if (
+            isinstance(max_v, int)
+            and isinstance(min_v, int)
+            and max_v < min_v
+            and max_key not in missing
+        ):
+            missing.append(max_key)
 
     if missing:
         raise ValueError(
@@ -523,264 +576,51 @@ def _validate_and_normalize_quotation_fields(
             "(no default code fallback allowed): " + ", ".join(missing)
         )
 
-    return {
-        "rule_version": rule_version,
-        "currency": currency,
-        "catalogue_path": catalogue_path,
-        "rounding_mode": rounding_mode,
-        "min_quantity": min_quantity,
-        "max_quantity": max_quantity,
-        "max_lines": max_lines,
-        "discount_tier_50_percent": discount_tier_50_percent,
-        "discount_tier_100_percent": discount_tier_100_percent,
-        "free_shipping_threshold_cents": free_shipping_threshold_cents,
-        "shipping_fee_cents": shipping_fee_cents,
-        "course_notice": course_notice,
-    }
+    return normalized
 
 
-def _render_quotation_python_module(fields: dict[str, Any]) -> str:
-    """Render deterministic Python quotation calculation code from validated rule fields.
-
-    Raises ValueError if any required field is missing or invalid; never falls back silently.
-    """
-    normalized = _validate_and_normalize_quotation_fields(fields)
+def render_python_module_from_contract(
+    fields: dict[str, Any],
+    required_content: dict[str, str] | None = None,
+    contract: dict[str, Any] | None = None,
+) -> str:
+    """Generic config-driven Python module renderer using project-configured templates or direct python_code."""
+    effective_contract = contract if isinstance(contract, dict) else DEFAULT_PYTHON_MODULE_CONTRACT
+    normalized = validate_and_normalize_python_contract_fields(
+        fields,
+        required_content=required_content,
+        contract=effective_contract,
+    )
     if "python_code" in normalized:
         return str(normalized["python_code"])
 
-    rule_version_lit = json.dumps(normalized["rule_version"], ensure_ascii=False)
-    currency_lit = json.dumps(normalized["currency"], ensure_ascii=False)
-    catalogue_lit = json.dumps(normalized["catalogue_path"], ensure_ascii=False)
-    rounding_lit = json.dumps(normalized["rounding_mode"], ensure_ascii=False)
-    course_notice_lit = json.dumps(normalized["course_notice"], ensure_ascii=False)
-
-    return f'''"""Deterministic HansePack quotation calculator ({normalized["rule_version"]}).
-
-Generated by the Software Factory implementation capability from validated
-ProductHandoverPayload rules. Runtime operates purely in Python with integer cents
-and Decimal ROUND_HALF_UP without any Factory or LLM dependency.
-"""
-
-from __future__ import annotations
-
-import json
-from decimal import Decimal, ROUND_HALF_UP
-from pathlib import Path
-from typing import Any
-
-RULE_VERSION = {rule_version_lit}
-CURRENCY = {currency_lit}
-CATALOGUE_REL_PATH = {catalogue_lit}
-ROUNDING_MODE = {rounding_lit}
-MIN_QUANTITY = {normalized["min_quantity"]}
-MAX_QUANTITY = {normalized["max_quantity"]}
-MAX_LINES = {normalized["max_lines"]}
-DISCOUNT_TIER_50_PERCENT = {normalized["discount_tier_50_percent"]}
-DISCOUNT_TIER_100_PERCENT = {normalized["discount_tier_100_percent"]}
-FREE_SHIPPING_THRESHOLD_CENTS = {normalized["free_shipping_threshold_cents"]}
-SHIPPING_FEE_CENTS = {normalized["shipping_fee_cents"]}
-COURSE_NOTICE = {course_notice_lit}
-
-DEFAULT_CATALOGUE_PATH = Path(__file__).resolve().parents[1] / CATALOGUE_REL_PATH
-
-
-class QuotationValidationError(ValueError):
-    """Raised when quotation input fails business validation."""
-
-    def __init__(self, message: str, reason: str = "validation_error") -> None:
-        super().__init__(message)
-        self.reason = reason
-
-
-def load_catalogue(
-    catalogue_path: str | Path | None = None,
-) -> dict[str, dict[str, Any]]:
-    """Load the binding HansePack product catalogue keyed by SKU."""
-    target = Path(catalogue_path) if catalogue_path is not None else DEFAULT_CATALOGUE_PATH
-    if not target.is_file():
-        raise FileNotFoundError(f"Catalogue file not found: {{target}}")
-    data = json.loads(target.read_text(encoding="utf-8"))
-    products = data.get("products")
-    if not isinstance(products, list):
-        raise ValueError("Catalogue JSON must contain a 'products' list")
-    return {{str(item["sku"]): item for item in products if isinstance(item, dict) and "sku" in item}}
-
-
-def _discount_percent_for_quantity(quantity: int) -> int:
-    if quantity >= 100:
-        return DISCOUNT_TIER_100_PERCENT
-    if quantity >= 50:
-        return DISCOUNT_TIER_50_PERCENT
-    return 0
-
-
-def _calculate_rounded_discount_cents(
-    list_amount_cents: int, discount_percent: int
-) -> int:
-    if discount_percent <= 0:
-        return 0
-    exact_discount = (
-        Decimal(list_amount_cents) * Decimal(discount_percent)
-    ) / Decimal(100)
-    return int(exact_discount.quantize(Decimal("1"), rounding=ROUND_HALF_UP))
-
-
-def _validate_items(
-    items: Any,
-    catalogue: dict[str, dict[str, Any]],
-) -> list[tuple[dict[str, Any], int]]:
-    if not isinstance(items, list):
-        raise QuotationValidationError(
-            "Quotation items must be provided as a list.",
-            reason="invalid_items_structure",
+    template_rel = str(
+        effective_contract.get(
+            "module_template_path",
+            DEFAULT_PYTHON_MODULE_CONTRACT["module_template_path"],
         )
-    if len(items) == 0:
-        raise QuotationValidationError(
-            "At least one quotation line item is required.",
-            reason="empty_items",
-        )
-    if len(items) > MAX_LINES:
-        raise QuotationValidationError(
-            f"A quotation may contain at most {{MAX_LINES}} lines.",
-            reason="too_many_lines",
-        )
-
-    validated: list[tuple[dict[str, Any], int]] = []
-    seen_skus: set[str] = set()
-    for raw_item in items:
-        if not isinstance(raw_item, dict):
-            raise QuotationValidationError(
-                "Each quotation line must be an object with 'sku' and 'quantity'.",
-                reason="invalid_line_item",
-            )
-        sku = raw_item.get("sku")
-        if not isinstance(sku, str) or not sku.strip():
-            raise QuotationValidationError(
-                "Each quotation line must specify a valid SKU string.",
-                reason="missing_sku",
-            )
-        if sku not in catalogue:
-            raise QuotationValidationError(
-                f"Unknown SKU '{{sku}}'; select an item from the HansePack catalogue.",
-                reason="unknown_sku",
-            )
-        if sku in seen_skus:
-            raise QuotationValidationError(
-                f"Duplicate SKU '{{sku}}'; each SKU may appear at most once per quotation.",
-                reason="duplicate_sku",
-            )
-        seen_skus.add(sku)
-
-        if "quantity" not in raw_item or raw_item["quantity"] is None:
-            raise QuotationValidationError(
-                f"Missing quantity for SKU '{{sku}}'.",
-                reason="missing_quantity",
-            )
-        qty = raw_item["quantity"]
-        if isinstance(qty, bool):
-            raise QuotationValidationError(
-                f"Invalid quantity for SKU '{{sku}}': boolean values are not allowed.",
-                reason="quantity_wrong_type",
-            )
-        if isinstance(qty, float):
-            raise QuotationValidationError(
-                f"Invalid quantity for SKU '{{sku}}': fractional quantities are not allowed.",
-                reason="quantity_not_integer",
-            )
-        if not isinstance(qty, int):
-            raise QuotationValidationError(
-                f"Invalid quantity for SKU '{{sku}}': quantity must be an integer.",
-                reason="quantity_wrong_type",
-            )
-        if qty < MIN_QUANTITY or qty > MAX_QUANTITY:
-            raise QuotationValidationError(
-                f"Invalid quantity {{qty}} for SKU '{{sku}}': quantity must be between {{MIN_QUANTITY}} and {{MAX_QUANTITY}}.",
-                reason="quantity_out_of_range",
-            )
-
-        validated.append((catalogue[sku], qty))
-
-    return validated
-
-
-def calculate_quotation(
-    items: list[dict[str, Any]],
-    *,
-    catalogue_path: str | Path | None = None,
-    rule_version: str = RULE_VERSION,
-) -> dict[str, Any]:
-    """Calculate a deterministic HansePack quotation in integer EUR cents."""
-    if rule_version != RULE_VERSION:
-        raise QuotationValidationError(
-            f"Unsupported rule version '{{rule_version}}'; expected '{{RULE_VERSION}}'.",
-            reason="unsupported_rule_version",
-        )
-
-    catalogue = load_catalogue(catalogue_path)
-    validated_lines = _validate_items(items, catalogue)
-
-    calculated_lines: list[dict[str, Any]] = []
-    for product, quantity in validated_lines:
-        unit_price_cents = int(product["unit_price_cents"])
-        list_amount_cents = quantity * unit_price_cents
-        discount_percent = _discount_percent_for_quantity(quantity)
-        discount_cents = _calculate_rounded_discount_cents(
-            list_amount_cents, discount_percent
-        )
-        net_cents = list_amount_cents - discount_cents
-        calculated_lines.append(
-            {{
-                "sku": str(product["sku"]),
-                "quantity": quantity,
-                "unit_price_cents": unit_price_cents,
-                "list_amount_cents": list_amount_cents,
-                "discount_percent": discount_percent,
-                "discount_cents": discount_cents,
-                "net_cents": net_cents,
-            }}
-        )
-
-    goods_net_cents = sum(line["net_cents"] for line in calculated_lines)
-    shipping_cents = (
-        SHIPPING_FEE_CENTS
-        if goods_net_cents < FREE_SHIPPING_THRESHOLD_CENTS
-        else 0
     )
-    total_cents = goods_net_cents + shipping_cents
+    template_path = REPO_ROOT / template_rel
+    if not template_path.is_file():
+        raise FileNotFoundError(
+            f"Configured Python module template not found: {template_path}"
+        )
+    template_text = template_path.read_text(encoding="utf-8")
 
-    return {{
-        "currency": CURRENCY,
-        "rule_version": RULE_VERSION,
-        "course_notice": COURSE_NOTICE,
-        "lines": calculated_lines,
-        "goods_net_cents": goods_net_cents,
-        "shipping_cents": shipping_cents,
-        "total_cents": total_cents,
-    }}
-'''
-
-
-_QUOTATION_RULE_CONSTANT_MAP: dict[str, str] = {
-    "rule_version": "RULE_VERSION",
-    "currency": "CURRENCY",
-    "catalogue_path": "CATALOGUE_REL_PATH",
-    "rounding_mode": "ROUNDING_MODE",
-    "min_quantity": "MIN_QUANTITY",
-    "max_quantity": "MAX_QUANTITY",
-    "max_lines": "MAX_LINES",
-    "discount_tier_50_percent": "DISCOUNT_TIER_50_PERCENT",
-    "discount_tier_100_percent": "DISCOUNT_TIER_100_PERCENT",
-    "free_shipping_threshold_cents": "FREE_SHIPPING_THRESHOLD_CENTS",
-    "shipping_fee_cents": "SHIPPING_FEE_CENTS",
-    "course_notice": "COURSE_NOTICE",
-}
+    render_ctx: dict[str, Any] = {}
+    for k, v in normalized.items():
+        render_ctx[k] = v
+        if isinstance(v, str):
+            render_ctx[f"{k}_lit"] = json.dumps(v, ensure_ascii=False)
+    return template_text.format(**render_ctx)
 
 
-def validate_rendered_quotation_module_pre_gate(
+def validate_python_module_pre_gate(
     py_code: str,
     required_content: dict[str, str],
+    contract: dict[str, Any] | None = None,
 ) -> list[str]:
-    """Deterministic in-memory pre-gate validator for generated Python quotation modules."""
+    """Generic deterministic in-memory AST pre-gate validator for generated Python modules."""
     findings: list[str] = []
     if not isinstance(py_code, str) or not py_code.strip():
         return ["Rendered Python quotation module is empty."]
@@ -793,18 +633,26 @@ def validate_rendered_quotation_module_pre_gate(
     except SyntaxError as exc:
         return [f"SyntaxError in generated Python module: {exc}"]
 
+    effective_contract = contract if isinstance(contract, dict) else DEFAULT_PYTHON_MODULE_CONTRACT
+    req_classes = [str(c) for c in (effective_contract.get("required_classes") or [])]
+    req_funcs = [str(f) for f in (effective_contract.get("required_functions") or [])]
+    rule_const_map = {
+        str(k): str(v)
+        for k, v in (effective_contract.get("rule_constant_map") or {}).items()
+    }
+
     defined_funcs = {
         node.name for node in tree.body if isinstance(node, ast.FunctionDef)
     }
     defined_classes = {
         node.name for node in tree.body if isinstance(node, ast.ClassDef)
     }
-    if "QuotationValidationError" not in defined_classes:
-        findings.append("Missing required class 'QuotationValidationError'.")
-    if "load_catalogue" not in defined_funcs:
-        findings.append("Missing required function 'load_catalogue'.")
-    if "calculate_quotation" not in defined_funcs:
-        findings.append("Missing required function 'calculate_quotation'.")
+    for cls_name in req_classes:
+        if cls_name not in defined_classes:
+            findings.append(f"Missing required class '{cls_name}'.")
+    for fn_name in req_funcs:
+        if fn_name not in defined_funcs:
+            findings.append(f"Missing required function '{fn_name}'.")
 
     for node in ast.walk(tree):
         if isinstance(node, ast.Import):
@@ -840,7 +688,7 @@ def validate_rendered_quotation_module_pre_gate(
     for key, expected_val in required_content.items():
         if not expected_val:
             continue
-        const_name = _QUOTATION_RULE_CONSTANT_MAP.get(key)
+        const_name = rule_const_map.get(key)
         if const_name and const_name in assigned_consts:
             if str(assigned_consts[const_name]) != str(expected_val):
                 findings.append(
@@ -853,6 +701,38 @@ def validate_rendered_quotation_module_pre_gate(
             )
 
     return findings
+
+
+def _validate_and_normalize_quotation_fields(
+    fields: dict[str, Any],
+) -> dict[str, Any]:
+    """Backward-compatible wrapper delegating to generic config-driven Python contract validation."""
+    return validate_and_normalize_python_contract_fields(
+        fields,
+        required_content=HANSEPACK_S6_REQUIRED_RULES,
+        contract=DEFAULT_PYTHON_MODULE_CONTRACT,
+    )
+
+
+def _render_quotation_python_module(fields: dict[str, Any]) -> str:
+    """Backward-compatible wrapper delegating to generic config-driven Python template rendering."""
+    return render_python_module_from_contract(
+        fields,
+        required_content=HANSEPACK_S6_REQUIRED_RULES,
+        contract=DEFAULT_PYTHON_MODULE_CONTRACT,
+    )
+
+
+def validate_rendered_quotation_module_pre_gate(
+    py_code: str,
+    required_content: dict[str, str],
+) -> list[str]:
+    """Backward-compatible wrapper delegating to generic AST pre-gate validation."""
+    return validate_python_module_pre_gate(
+        py_code,
+        required_content=required_content,
+        contract=DEFAULT_PYTHON_MODULE_CONTRACT,
+    )
 
 
 def resolve_product_repo_root(product_repo_path: str | Path) -> Path:
@@ -1617,6 +1497,16 @@ def run_customer_delivery_workflow(
     product_github_url = str(cfg_data.get("product_github_url", "")).rstrip("/")
     if not product_github_url and resolved_project_id == "website-01":
         product_github_url = "https://github.com/mfadhilahm/client-01-website"
+    python_module_contract = (
+        cfg_data.get("python_module_contract")
+        if isinstance(cfg_data.get("python_module_contract"), dict)
+        else DEFAULT_PYTHON_MODULE_CONTRACT
+    )
+    configured_github_issues = [
+        str(u).strip()
+        for u in (cfg_data.get("github_issue_urls") or [])
+        if str(u).strip()
+    ]
 
     if task is None:
         task, loaded_req_content = build_task_from_project_config(
@@ -1985,10 +1875,15 @@ def run_customer_delivery_workflow(
             try:
                 parsed_fields = _extract_json_dict(text)
                 if is_python_quotation:
-                    rendered_content = _render_quotation_python_module(parsed_fields)
-                    pre_gate_findings = validate_rendered_quotation_module_pre_gate(
+                    rendered_content = render_python_module_from_contract(
+                        parsed_fields,
+                        required_content=handover.required_content,
+                        contract=python_module_contract,
+                    )
+                    pre_gate_findings = validate_python_module_pre_gate(
                         rendered_content,
                         handover.required_content,
+                        contract=python_module_contract,
                     )
                     if pre_gate_findings:
                         pre_gate_passed = False
@@ -2213,13 +2108,80 @@ def run_customer_delivery_workflow(
         step_run_id = str(uuid.uuid4())
         started = time.perf_counter()
 
+        imp_ok = (
+            latest_imp.status == "completed"
+            and qa_handover.ready_for_qa
+            and bool(latest_imp.written_file)
+        )
+
+        # Pre-QA Short-Circuit (Feedback Session 6 Point 3):
+        # Intercept failed implementation steps before running an unnecessary pytest subprocess or QA LLM call.
+        if not imp_ok:
+            duration = time.perf_counter() - started
+            short_circuit_summary = (
+                "Pre-QA short-circuit: intercepted failed implementation step before "
+                f"executing product tests or QA LLM ({latest_imp.summary})."
+            )
+            findings = [
+                QAFinding(
+                    severity="high",
+                    description=f"Implementation step did not complete validly: {latest_imp.summary}",
+                )
+            ]
+            qa_res = QATestResult(
+                status="failed",
+                summary=short_circuit_summary,
+                pytest_exit_code=1,
+                findings=findings,
+                human_approval_required=True,
+                summary_status="ok",
+                run_id=step_run_id,
+                trace_path=_portable_path(Path(state["trace_file"])),
+                tool_status="not_started",
+            )
+            _record_step_trace(
+                {
+                    "run_id": step_run_id,
+                    "workflow_id": t.workflow_id,
+                    "project_id": t.project_id,
+                    "task_id": t.task_id,
+                    "factory_commit": factory_commit,
+                    "factory_commit_clean": factory_commit_clean,
+                    "workflow_code_sha256": workflow_code_sha256,
+                    "iteration": qa_handover.iteration,
+                    "agent": "qa-test-agent",
+                    "role": "qa_test_engineer",
+                    "accountable_human": role_meta.accountable_human,
+                    "provider": settings.llm_provider if qa_llm is None else "injected",
+                    "model": settings.llm_model if qa_llm is None else type(qa_llm).__name__,
+                    "status": qa_res.status,
+                    "summary": qa_res.summary,
+                    "summary_status": "ok",
+                    "tools": [],
+                    "tool_status": "not_started",
+                    "short_circuited_before_qa": True,
+                    "pytest_target": qa_handover.product_test_target,
+                    "pytest_exit_code": qa_res.pytest_exit_code,
+                    "artifact_sha256": qa_handover.artifact_sha256,
+                    "duration_seconds": round(duration, 4),
+                    "calls": 0,
+                    "input_tokens": 0,
+                    "output_tokens": 0,
+                    "estimated_cost_credits": 0.0,
+                },
+                run_dir=state["run_dir"],
+                trace_file=state["trace_file"],
+            )
+            q_history = list(state.get("qa_history", []))
+            q_history.append(qa_res)
+            return {"qa_history": q_history, "qa_feedback": latest_imp.summary}
+
         exit_code, test_output = run_product_test_tool(
             product_root,
             qa_handover.product_test_target,
             timeout_seconds=t.timeout_seconds,
         )
 
-        imp_ok = latest_imp.status == "completed" and qa_handover.ready_for_qa
         tech_status: Literal["passed", "failed", "needs_review", "error"] = (
             "passed" if (exit_code == 0 and imp_ok) else "failed"
         )
@@ -2484,14 +2446,23 @@ def run_customer_delivery_workflow(
         "review_file": _portable_path(run_dir / "review.json"),
         "artifact_hashes": artifact_hashes,
         "issue_and_pr_references": [
-            f"{product_github_url}/blob/{product_input_commit}/{inp}"
-            if product_github_url and product_input_commit != "unknown"
-            else f"{task.product_repo_path}/{inp}"
-            for inp in task.input_files
-            if inp.startswith("docs/")
+            *configured_github_issues,
+            *[
+                f"{product_github_url}/blob/{product_input_commit}/{inp}"
+                if product_github_url and product_input_commit != "unknown"
+                else f"{task.product_repo_path}/{inp}"
+                for inp in task.input_files
+                if inp.startswith("docs/")
+            ],
         ],
         "cost_records": "costs/usage.csv",
         "total_estimated_agent_credits": total_credits,
+        "llm_settings": {
+            "temperature": 0.0,
+            "reasoning": False,
+            "json_mode": True,
+            "min_output_tokens": 1024,
+        },
     }
     manifest_path.write_text(
         json.dumps(manifest_payload, indent=2, ensure_ascii=False) + "\n",

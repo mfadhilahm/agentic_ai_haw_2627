@@ -12,6 +12,11 @@ product_repo_path: "../client-02-quotation"
 factory_github_url: "https://github.com/mfadhilahm/agentic_ai_haw_2627"
 product_github_url: "https://github.com/minhnyn/client-02-quotation"
 
+# Real GitHub Issue URLs tracking the HansePack commission (Feedback Point 2)
+github_issue_urls:
+  - "https://github.com/minhnyn/client-02-quotation/issues/1"
+  - "https://github.com/mfadhilahm/agentic_ai_haw_2627/issues/4"
+
 # Allowed writable directory prefixes inside the product checkout (A4 sandbox)
 allowed_write_prefixes:
   - "quotation/"
@@ -65,3 +70,38 @@ required_content:
   free_shipping_threshold_cents: "50000"
   shipping_fee_cents: "1200"
   course_notice: "Net amounts – course project, not a binding quotation"
+
+# Declarative Python module contract consumed by the generic Factory validator & template renderer (Feedback Point 3)
+python_module_contract:
+  module_template_path: "config/projects/templates/quotation_02_calculator.py.tpl"
+  required_classes:
+    - "QuotationValidationError"
+  required_functions:
+    - "load_catalogue"
+    - "calculate_quotation"
+  integer_rule_keys:
+    min_quantity: 1
+    max_quantity: 1
+    max_lines: 1
+    discount_tier_50_percent: 0
+    discount_tier_100_percent: 0
+    free_shipping_threshold_cents: 0
+    shipping_fee_cents: 0
+  enum_rule_keys:
+    rounding_mode:
+      - "ROUND_HALF_UP"
+  max_gte_min_pairs:
+    - ["max_quantity", "min_quantity"]
+  rule_constant_map:
+    rule_version: "RULE_VERSION"
+    currency: "CURRENCY"
+    catalogue_path: "CATALOGUE_REL_PATH"
+    rounding_mode: "ROUNDING_MODE"
+    min_quantity: "MIN_QUANTITY"
+    max_quantity: "MAX_QUANTITY"
+    max_lines: "MAX_LINES"
+    discount_tier_50_percent: "DISCOUNT_TIER_50_PERCENT"
+    discount_tier_100_percent: "DISCOUNT_TIER_100_PERCENT"
+    free_shipping_threshold_cents: "FREE_SHIPPING_THRESHOLD_CENTS"
+    shipping_fee_cents: "SHIPPING_FEE_CENTS"
+    course_notice: "COURSE_NOTICE"

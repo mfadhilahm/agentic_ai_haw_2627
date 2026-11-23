@@ -12,7 +12,7 @@ agent:
 
 ci:
   run_credits: 1.0
-  runs: 10
+  runs: 13
 
 session: 6
 date: 2026-11-16
@@ -71,7 +71,27 @@ human_effort:
     human_review_hours: 0.75           # 75.0 credits (saad, felix, yaw)
     rework_hours: 0.25                 # 25.0 credits (muhammad, mirko)
     session_04_total_hours: 3.75       # 375.0 credits (250.0 customer delivery/review/rework + 125.0 Factory dev)
-  total_hours: 64.50
+  session_05_breakdown:
+    factory_development_hours: 0.75    # 75.0 credits (muhammad, minh)
+    customer_delivery_hours: 1.25      # 125.0 credits (saad, mirko, felix)
+    security_advisory_sr01_hours: 0.75 # 75.0 credits (muhammad, saad, mirko)
+    human_review_hours: 0.50           # 50.0 credits (saad, felix, yaw)
+    session_05_total_hours: 3.25       # 325.0 credits (250.0 customer/SR-01/review + 75.0 Factory dev)
+  session_06_breakdown:
+    unit_definition: "All values are explicit individual person-hours (Personenstunden, 100.0 credits/h), assigned exclusively per person and activity without overlap."
+    factory_switch_development_hours: 0.75 # 75.0 credits (muhammad: 0.50h [30m], minh: 0.25h [15m] - separate second-customer switch)
+    customer_delivery_hours: 1.00          # 100.0 credits (yaw: 0.25h [15m], saad: 0.25h [15m], mirko: 0.25h [15m], felix: 0.25h [15m])
+    human_review_hours: 0.50               # 50.0 credits (saad: 0.20h [12m], minh: 0.15h [9m], felix: 0.15h [9m])
+    rework_hours: 0.25                     # 25.0 credits (muhammad: 0.15h [9m], mirko: 0.10h [6m])
+    per_member_person_hours:
+      yaw: 0.25      # 15 min (0.25h customer_delivery) = 25.0 credits
+      saad: 0.45     # 27 min (0.25h customer_delivery + 0.20h human_review) = 45.0 credits
+      felix: 0.40    # 24 min (0.25h customer_delivery + 0.15h human_review) = 40.0 credits
+      minh: 0.40     # 24 min (0.25h factory_switch + 0.15h human_review) = 40.0 credits
+      mirko: 0.35    # 21 min (0.25h customer_delivery + 0.10h rework) = 35.0 credits
+      muhammad: 0.65 # 39 min (0.50h factory_switch + 0.15h rework) = 65.0 credits
+    session_06_total_hours: 2.50           # 250.0 credits (1.75h = 175.0 customer delivery/review/rework + 0.75h = 75.0 Factory switch)
+  total_hours: 67.00
 
 agent_runs:
   session_01:
@@ -404,7 +424,10 @@ credits_calculation:
     factory_commit_fixed: "f8d778b3968c307974016a162faeaff1c0af189c"
     product_input_commit: "a167bf3cc96fc8ce00c43c55c17a616a113f9290"
     product_output_commit: "724cfe72a1758e40346d77afd4b2cc4fbe7eb57d"
-    nordwerk_frozen_commit: "53885e0a430dab3d75ed12b6ff4d7078aa19c595"
+    nordwerk_frozen_commit: "84d5baf9fcfebd9b1c4772e63fcd6b92d70fc53f (R-S5-FINAL / v1.0.0-s5-rc on main, including English site/en.html)"
+    github_issue_urls:
+      - "https://github.com/minhnyn/client-02-quotation/issues/1"
+      - "https://github.com/mfadhilahm/agentic_ai_haw_2627/issues/4"
     agent_credits_failed_run_001: 3.7552
     agent_credits_approved_run_002: 8.6417
     untraced_diagnostic_probe_credits: "unknown"
@@ -412,10 +435,10 @@ credits_calculation:
     human_customer_delivery_credits: 100.0
     human_review_credits: 50.0
     human_rework_credits: 25.0
-    session_06_ci_credits_local: 0.0
-    session_06_known_customer_subtotal_credits: 187.3969   # Partial known total (175.0 human + 12.3969 tracked workflow agent + 0.0 local CI; untraced diagnostic probes marked unknown)
+    session_06_ci_credits: 3.0                             # All 3 GitHub Actions CI runs on 2026-11-16 (commits 5270442, f8d778b, e86ad33)
+    session_06_known_customer_subtotal_credits: 190.3969   # Partial known total (175.0 human + 12.3969 tracked workflow agent + 3.0 CI; untraced diagnostic probes marked unknown)
     human_factory_switch_development_credits: 75.0         # Accounted separately against 150.0 S6-S8 Factory switch budget
-    session_06_known_grand_total_credits: 262.3969         # Partial known total excluding untraced diagnostic probes
+    session_06_known_grand_total_credits: 265.3969         # Partial known total excluding untraced diagnostic probes
 
 # -----------------------------------------------------------------------------
 # Session 6–8 Customer Project 02 (HansePack Handelsgesellschaft) Budget Plan

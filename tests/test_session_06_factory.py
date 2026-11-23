@@ -11,6 +11,7 @@
 """
 from __future__ import annotations
 
+import csv
 import hashlib
 import json
 import shutil
@@ -21,11 +22,19 @@ from langchain_core.messages import AIMessage
 
 from src.agents.customer_delivery_workflow import (
     HANSEPACK_S6_REQUIRED_RULES,
+    SESSION_05_CR01_REQUIRED_CONTENT,
+    _render_english_html_document,
+    _render_html_document,
     build_task_from_project_config,
     load_project_config,
     record_customer_human_review,
+    render_python_module_from_contract,
     run_customer_delivery_workflow,
+    run_product_test_tool,
+    validate_and_normalize_python_contract_fields,
     validate_product_workspace_path,
+    validate_python_module_pre_gate,
+    validate_rendered_html_pre_gate,
     write_product_file_tool,
 )
 from src.agents.task_models import (
@@ -47,20 +56,52 @@ def _snapshot_tree_hashes(root: Path) -> dict[str, str]:
 
 
 def _create_s6_temp_nordwerk_checkout(tmp_path: Path) -> Path:
-    """Create an isolated temporary Nordwerk checkout to test project isolation."""
+    """Create an isolated temporary Nordwerk checkout matching the final Session 5 release (84d5baf / v1.0.0-s5-rc),
+    including both the German page (site/index.html) and the English website (site/en.html).
+    """
     nordwerk_dir = tmp_path / "client-01-website"
+    (nordwerk_dir / "docs").mkdir(parents=True, exist_ok=True)
     (nordwerk_dir / "site").mkdir(parents=True, exist_ok=True)
     (nordwerk_dir / "tests").mkdir(parents=True, exist_ok=True)
-    (nordwerk_dir / "site" / "index.html").write_text(
-        "<!DOCTYPE html><html lang='de'><body><h1>Nordwerk Industrie-Service</h1></body></html>\n",
+
+    de_html = _render_html_document(SESSION_05_CR01_REQUIRED_CONTENT)
+    en_html = _render_english_html_document(SESSION_05_CR01_REQUIRED_CONTENT)
+
+    (nordwerk_dir / "site" / "index.html").write_text(de_html, encoding="utf-8")
+    (nordwerk_dir / "site" / "en.html").write_text(en_html, encoding="utf-8")
+    (nordwerk_dir / "site" / "styles.css").write_text(
+        "*, *::before, *::after { box-sizing: border-box; }\n"
+        "body { margin: 0; font-family: sans-serif; overflow-x: hidden; }\n"
+        "a:focus-visible { outline: 3px solid #005fcc; outline-offset: 2px; }\n"
+        "@media (min-width: 768px) { .service-grid { display: grid; } }\n",
         encoding="utf-8",
     )
-    (nordwerk_dir / "site" / "styles.css").write_text(
-        "body { margin: 0; }\n",
+    (nordwerk_dir / "docs" / "issue-03-session-05-cr01.md").write_text(
+        "# Issue #3: [NW-S5-CR01] Nordwerk Session 5 Bilingual Release (84d5baf)\n",
+        encoding="utf-8",
+    )
+    (nordwerk_dir / "docs" / "security-advisory-sr01.md").write_text(
+        "# SR-01 Security Advisory & Component Inventory (84d5baf)\n",
+        encoding="utf-8",
+    )
+    (nordwerk_dir / "docs" / "release-s5-handover.md").write_text(
+        "# Session 5 Final Release Handover (84d5baf / v1.0.0-s5-rc)\n",
         encoding="utf-8",
     )
     (nordwerk_dir / "tests" / "test_website_s5.py").write_text(
-        "def test_ok():\n    assert True\n",
+        "from pathlib import Path\n\n"
+        "SITE_DIR = Path(__file__).resolve().parents[1] / 'site'\n\n"
+        "def test_s5_final_release_84d5baf_german_and_english_pages():\n"
+        "    de_html = (SITE_DIR / 'index.html').read_text(encoding='utf-8')\n"
+        "    en_html = (SITE_DIR / 'en.html').read_text(encoding='utf-8')\n"
+        "    assert '<html lang=\"de\">' in de_html\n"
+        "    assert 'Technische Einkaufsabteilungen' in de_html\n"
+        "    assert 'href=\"en.html\"' in de_html\n"
+        "    assert '<html lang=\"en\">' in en_html\n"
+        "    assert 'Practical support for your technical operations.' in en_html\n"
+        "    assert 'Technical purchasing departments' in en_html\n"
+        "    assert 'Request information' in en_html\n"
+        "    assert 'href=\"index.html\"' in en_html\n",
         encoding="utf-8",
     )
     return nordwerk_dir
@@ -108,21 +149,31 @@ def _create_s6_temp_hansepack_checkout(tmp_path: Path) -> Path:
     )
 
     real_product_repo = REPO_ROOT.parent / "client-02-quotation"
-    if (real_product_repo / "main.py").is_file():
-        shutil.copyfile(real_product_repo / "main.py", product_dir / "main.py")
-    else:
+    copied_main = False
+    try:
+        if (real_product_repo / "main.py").is_file():
+            shutil.copyfile(real_product_repo / "main.py", product_dir / "main.py")
+            copied_main = True
+    except OSError:
+        copied_main = False
+    if not copied_main:
         (product_dir / "main.py").write_text(
             "import json, sys\nfrom quotation.calculator import QuotationValidationError, calculate_quotation\n"
             "def main():\n    return 0\n",
             encoding="utf-8",
         )
 
-    if (real_product_repo / "tests" / "test_quotation_s6.py").is_file():
-        shutil.copyfile(
-            real_product_repo / "tests" / "test_quotation_s6.py",
-            product_dir / "tests" / "test_quotation_s6.py",
-        )
-    else:
+    copied_test = False
+    try:
+        if (real_product_repo / "tests" / "test_quotation_s6.py").is_file():
+            shutil.copyfile(
+                real_product_repo / "tests" / "test_quotation_s6.py",
+                product_dir / "tests" / "test_quotation_s6.py",
+            )
+            copied_test = True
+    except OSError:
+        copied_test = False
+    if not copied_test:
         (product_dir / "tests" / "test_quotation_s6.py").write_text(
             "import pytest\n"
             "from quotation.calculator import QuotationValidationError, calculate_quotation\n\n"
@@ -239,21 +290,38 @@ def test_project_switch_config_loads_quotation02_and_preserves_website01() -> No
 def test_project_isolation_hansepack_run_never_modifies_nordwerk_files(
     tmp_path: Path,
 ) -> None:
-    """A4, L6.1: Verify HansePack workflow execution leaves all Nordwerk files untouched and enforces sandbox."""
+    """A4, B5, L6.1 (Feedback Point 1): Verify HansePack workflow execution leaves the full Session 5
+    Nordwerk release (84d5baf, including site/index.html and English site/en.html) untouched and separately testable.
+    """
     nordwerk_dir = _create_s6_temp_nordwerk_checkout(tmp_path)
     hansepack_dir = _create_s6_temp_hansepack_checkout(tmp_path)
     runs_dir = tmp_path / "runs"
 
     nordwerk_before = _snapshot_tree_hashes(nordwerk_dir)
-
-    # Sandbox must reject any attempt to escape HansePack repo into Nordwerk or modify fixtures/tests
-    with pytest.raises(ValueError, match="escapes configured product workspace"):
-        validate_product_workspace_path(
-            hansepack_dir,
-            "../client-01-website/site/index.html",
-            for_write=True,
-            allowed_write_prefixes=["quotation/"],
+    assert "site/index.html" in nordwerk_before
+    assert "site/en.html" in nordwerk_before
+    assert "docs/security-advisory-sr01.md" in nordwerk_before
+    assert (
+        validate_rendered_html_pre_gate(
+            (nordwerk_dir / "site" / "index.html").read_text(encoding="utf-8"),
+            SESSION_05_CR01_REQUIRED_CONTENT,
+            en_html=(nordwerk_dir / "site" / "en.html").read_text(encoding="utf-8"),
         )
+        == []
+    )
+
+    # Sandbox must reject any attempt to escape HansePack repo into Nordwerk (German or English page) or modify fixtures/tests
+    for escaped_nordwerk_target in (
+        "../client-01-website/site/index.html",
+        "../client-01-website/site/en.html",
+    ):
+        with pytest.raises(ValueError, match="escapes configured product workspace"):
+            validate_product_workspace_path(
+                hansepack_dir,
+                escaped_nordwerk_target,
+                for_write=True,
+                allowed_write_prefixes=["quotation/"],
+            )
 
     with pytest.raises(ValueError, match="outside allowed product directories"):
         write_product_file_tool(
@@ -293,6 +361,13 @@ def test_project_isolation_hansepack_run_never_modifies_nordwerk_files(
 
     nordwerk_after = _snapshot_tree_hashes(nordwerk_dir)
     assert nordwerk_after == nordwerk_before
+
+    # Confirm the untouched Nordwerk S5 release (84d5baf, including site/en.html) still passes its own product tests
+    nw_exit_code, _ = run_product_test_tool(
+        nordwerk_dir,
+        "tests/test_website_s5.py",
+    )
+    assert nw_exit_code == 0
 
 
 def test_hansepack_s6_workflow_delivers_q01_q03_e01_and_records_review(
@@ -414,3 +489,210 @@ def test_hansepack_missing_or_invalid_llm_fields_rejected_without_fallback(
     assert res_broken.implementation_history[-1].status == "error"
     assert "Pre-gate Python quotation validation failed" in res_broken.implementation_history[-1].summary
     assert res_broken.human_gate_status == "escalate_to_human"
+
+
+def test_session_06_feedback_ci_credits_person_hours_and_github_issues() -> None:
+    """Session 6 Feedback Point 1 & Point 2:
+    1. Verify 3 GitHub Actions CI runs on 2026-11-16 are recorded with 3.0 credits in costs/usage.csv & cost-model.yaml.
+    2. Verify human person-hours (Personenstunden) on 2026-11-16 are itemized per individual team member and exclusive category.
+    3. Verify real GitHub Issue URLs (client-02-quotation/issues/1 & agentic_ai_haw_2627/issues/4) are linked in config and run manifests.
+    4. Verify frozen Nordwerk commit in cost-model.yaml references the Session 5 release 84d5baf (including site/en.html).
+    """
+    import yaml
+
+    usage_csv = REPO_ROOT / "costs" / "usage.csv"
+    with usage_csv.open(newline="", encoding="utf-8-sig") as handle:
+        raw_rows = list(csv.reader(handle))
+    for idx, r in enumerate(raw_rows[1:], start=2):
+        assert len(r) == 8, f"Row {idx} in costs/usage.csv has {len(r)} columns: {r}"
+
+    with usage_csv.open(newline="", encoding="utf-8-sig") as handle:
+        dict_rows = list(csv.DictReader(handle))
+
+    s6_rows = [r for r in dict_rows if r["date"] == "2026-11-16"]
+    s6_ci_rows = [r for r in s6_rows if r["actor_type"] == "ci"]
+    assert len(s6_ci_rows) == 1
+    assert float(s6_ci_rows[0]["quantity"]) == 3.0
+    assert float(s6_ci_rows[0]["credits"]) == 3.0
+
+    s6_human_rows = [r for r in s6_rows if r["actor_type"] == "human"]
+    assert len(s6_human_rows) == 11
+    valid_members = {"yaw", "saad", "felix", "minh", "mirko", "muhammad"}
+    for h_row in s6_human_rows:
+        assert "+" not in h_row["actor"], f"Human row must specify single actor, got {h_row['actor']}"
+        assert h_row["actor"] in valid_members
+        assert h_row["notes"].startswith("Category: ")
+        assert abs(float(h_row["quantity"]) * 100.0 - float(h_row["credits"])) < 1e-6
+
+    total_s6_human_hours = sum(float(r["quantity"]) for r in s6_human_rows)
+    total_s6_human_credits = sum(float(r["credits"]) for r in s6_human_rows)
+    assert abs(total_s6_human_hours - 2.50) < 1e-6
+    assert abs(total_s6_human_credits - 250.0) < 1e-6
+
+    cost_model = yaml.safe_load((REPO_ROOT / "costs" / "cost-model.yaml").read_text(encoding="utf-8"))
+    assert cost_model["ci"]["runs"] == 13
+    s6_calc = cost_model["credits_calculation"]["session_06_breakdown"]
+    assert float(s6_calc["session_06_ci_credits"]) == 3.0
+    assert "84d5baf9fcfebd9b1c4772e63fcd6b92d70fc53f" in s6_calc["nordwerk_frozen_commit"]
+    assert "53885e0" not in s6_calc["nordwerk_frozen_commit"]
+    assert "https://github.com/minhnyn/client-02-quotation/issues/1" in s6_calc["github_issue_urls"]
+
+    hp_cfg = load_project_config("quotation-02")
+    assert "https://github.com/minhnyn/client-02-quotation/issues/1" in hp_cfg["github_issue_urls"]
+    assert "https://github.com/mfadhilahm/agentic_ai_haw_2627/issues/4" in hp_cfg["github_issue_urls"]
+
+    for wf_id in ("WF-QUOTATION02-S6-001", "WF-QUOTATION02-S6-002"):
+        m_path = REPO_ROOT / "runs" / "quotation-02" / wf_id / "manifest.json"
+        m_data = json.loads(m_path.read_text(encoding="utf-8"))
+        assert "https://github.com/minhnyn/client-02-quotation/issues/1" in m_data["issue_and_pr_references"]
+        assert "https://github.com/mfadhilahm/agentic_ai_haw_2627/issues/4" in m_data["issue_and_pr_references"]
+
+
+class _FlakyS6ImplementationLLM:
+    """Fails on iteration 1 (missing max_quantity), succeeds on iteration 2."""
+
+    def __init__(self) -> None:
+        self.calls = 0
+
+    def invoke(self, messages):
+        self.calls += 1
+        if self.calls == 1:
+            bad = dict(HANSEPACK_S6_REQUIRED_RULES)
+            bad.pop("max_quantity")
+            bad["summary"] = "Iteration 1 missing max_quantity."
+            return AIMessage(content=json.dumps(bad, ensure_ascii=False))
+        return FakeS6ValidImplementationLLM().invoke(messages)
+
+
+class _SpyS6QALLM:
+    """Tracks exact number of QA LLM invocations to verify pre-QA short-circuit."""
+
+    def __init__(self) -> None:
+        self.calls = 0
+
+    def invoke(self, messages):
+        self.calls += 1
+        return FakeS6QALLM().invoke(messages)
+
+
+def test_generic_python_contract_and_pre_qa_short_circuit_on_failed_implementation(
+    tmp_path: Path,
+) -> None:
+    """Session 6 Feedback Point 3:
+    1. Verify generic Python contract validator & AST pre-gate validate non-HansePack Python contracts as well
+       as declarative project templates from config/projects/templates/.
+    2. Verify failed implementation steps are intercepted before an unnecessary QA run (0 QA LLM calls and
+       0.0 QA credits on failed implementation iterations).
+    """
+    # 1. Generic non-HansePack contract validation & AST pre-gate check
+    custom_required = {
+        "service_version": "SVC-V1",
+        "max_batch_size": "50",
+        "mode": "STRICT",
+    }
+    custom_contract = {
+        "required_classes": ["CustomServiceError"],
+        "required_functions": ["compute_custom_metric"],
+        "integer_rule_keys": {"max_batch_size": 1},
+        "enum_rule_keys": {"mode": ["STRICT", "LENIENT"]},
+        "rule_constant_map": {
+            "service_version": "SERVICE_VERSION",
+            "max_batch_size": "MAX_BATCH_SIZE",
+            "mode": "MODE",
+        },
+    }
+    normalized_custom = validate_and_normalize_python_contract_fields(
+        {"service_version": "SVC-V1", "max_batch_size": "50", "mode": "STRICT"},
+        required_content=custom_required,
+        contract=custom_contract,
+    )
+    assert normalized_custom == {
+        "service_version": "SVC-V1",
+        "max_batch_size": 50,
+        "mode": "STRICT",
+    }
+
+    custom_py = (
+        'SERVICE_VERSION = "SVC-V1"\n'
+        "MAX_BATCH_SIZE = 50\n"
+        'MODE = "STRICT"\n'
+        "class CustomServiceError(ValueError):\n"
+        "    pass\n"
+        "def compute_custom_metric(x: int) -> int:\n"
+        "    return x * MAX_BATCH_SIZE\n"
+    )
+    assert (
+        validate_python_module_pre_gate(
+            custom_py,
+            required_content=custom_required,
+            contract=custom_contract,
+        )
+        == []
+    )
+
+    # Verify external template rendering from config/projects/quotation-02.yaml
+    hp_cfg = load_project_config("quotation-02")
+    rendered_hp = render_python_module_from_contract(
+        HANSEPACK_S6_REQUIRED_RULES,
+        required_content=HANSEPACK_S6_REQUIRED_RULES,
+        contract=hp_cfg["python_module_contract"],
+    )
+    assert (
+        validate_python_module_pre_gate(
+            rendered_hp,
+            required_content=HANSEPACK_S6_REQUIRED_RULES,
+            contract=hp_cfg["python_module_contract"],
+        )
+        == []
+    )
+
+    # 2. Verify Pre-QA Short-Circuit: Iteration 1 fails implementation -> 0 QA LLM calls on Iteration 1;
+    # Iteration 2 succeeds -> 1 QA LLM call total across the 2-iteration workflow.
+    hansepack_dir = _create_s6_temp_hansepack_checkout(tmp_path)
+    runs_dir = tmp_path / "runs"
+    flaky_imp_llm = _FlakyS6ImplementationLLM()
+    spy_qa_llm = _SpyS6QALLM()
+
+    task, req_rules = build_task_from_project_config(
+        "quotation-02",
+        product_repo_path=str(hansepack_dir),
+        workflow_id="WF-QUOTATION02-SHORT-CIRCUIT",
+    )
+    res = run_customer_delivery_workflow(
+        task,
+        project_id="quotation-02",
+        required_content=req_rules,
+        architect_llm=FakeS6ArchitectLLM(),
+        implementation_llm=flaky_imp_llm,
+        qa_llm=spy_qa_llm,
+        runs_root=runs_dir,
+    )
+    assert res.iterations_used == 2
+    assert flaky_imp_llm.calls == 2
+    assert spy_qa_llm.calls == 1
+    assert res.qa_history[0].status == "failed"
+    assert res.qa_history[0].tool_status == "not_started"
+    assert "Pre-QA short-circuit" in res.qa_history[0].summary
+    assert res.qa_history[1].status == "passed"
+    assert res.qa_history[1].tool_status == "completed"
+    assert res.human_gate_status == "pending_approval"
+
+    # When implementation fails on all iterations, QA LLM is called 0 times (0.0 QA credits)
+    spy_qa_all_fail = _SpyS6QALLM()
+    fail_task, _ = build_task_from_project_config(
+        "quotation-02",
+        product_repo_path=str(hansepack_dir),
+        workflow_id="WF-QUOTATION02-ALL-FAIL-SHORT-CIRCUIT",
+    )
+    res_all_fail = run_customer_delivery_workflow(
+        fail_task,
+        project_id="quotation-02",
+        required_content=req_rules,
+        architect_llm=FakeS6ArchitectLLM(),
+        implementation_llm=FakeS6IncompleteImplementationLLM(),
+        qa_llm=spy_qa_all_fail,
+        runs_root=runs_dir,
+    )
+    assert res_all_fail.iterations_used == 2
+    assert spy_qa_all_fail.calls == 0
+    assert all(q.tool_status == "not_started" for q in res_all_fail.qa_history)

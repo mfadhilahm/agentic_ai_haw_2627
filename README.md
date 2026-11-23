@@ -373,3 +373,46 @@ If a package change is necessary:
 ## Termin 2: Operations & Observability Agent (Mirko)
 
 Team-eigener LangGraph-Agent `ops-agent` zur **read-only** Unterstützung der Rollen `devops_engineer` und `cost_observability_engineer`. Er führt Docker-/CI-Konfigurationschecks durch, wertet lokale Ausführungstraces und Credits auf Task-Ebene aus und erstellt JSON-Reports/JSONL-Traces mit explizitem Human-Review-Punkt. Deployment erfolgt **nicht** automatisch. Siehe [`docs/OPS_AGENT.md`](docs/OPS_AGENT.md) für Setup, Testaufruf, CLI und Grenzen. Ein echter Ollama-/ICC-Lauf muss für die Termin-2-Evidenz separat ausgeführt werden.
+
+
+## Termin 6: Zweiter Kunde (`quotation-02` / HansePack) – Dieselbe Software Factory
+
+In Termin 6 wurde die bestehende Software Factory über die Projektkonfiguration [`config/projects/quotation-02.yaml`](config/projects/quotation-02.yaml) (mit ausgelagertem Projekttemplate [`config/projects/templates/quotation_02_calculator.py.tpl`](config/projects/templates/quotation_02_calculator.py.tpl) und generischem Python-AST-Pre-Gate sowie Pre-QA-Short-Circuit in [`src/agents/customer_delivery_workflow.py`](src/agents/customer_delivery_workflow.py)) auf das zweite, separate Kundenprodukt **HansePack Handelsgesellschaft** (`../client-02-quotation`, GitHub: [`minhnyn/client-02-quotation`](https://github.com/minhnyn/client-02-quotation), GitHub Issue: [`client-02-quotation#1`](https://github.com/minhnyn/client-02-quotation/issues/1) / [`agentic_ai_haw_2627#4`](https://github.com/mfadhilahm/agentic_ai_haw_2627/issues/4)) geschaltet, ohne das erste Kundenprodukt **Nordwerk Industrie-Service** (`../client-01-website`, GitHub: [`mfadhilahm/client-01-website`](https://github.com/mfadhilahm/client-01-website)) zu verändern. Alle Nachweise, Run-Artefakte und Kosten sind in [`evidence/session-06.md`](evidence/session-06.md) verlinkt.
+
+### 1. HansePack-Produkt unabhängig starten und testen (`../client-02-quotation`, `HP-AC01`–`HP-AC04`)
+
+Das gelieferte HansePack-Produkt (`quotation/calculator.py` + `main.py`, Commit `724cfe72a1758e40346d77afd4b2cc4fbe7eb57d`) arbeitet deterministisch in Python (`Decimal` mit `ROUND_HALF_UP`, Ganzzahl-Cent) ohne Laufzeitabhängigkeit zur Factory oder einem LLM:
+
+```powershell
+cd ../client-02-quotation
+
+# Q01: HP-BOX x 1 (Warenwert 250, Versand 1200, Gesamt 1450 Cent)
+python main.py --sku HP-BOX --quantity 1
+
+# Q03: HP-BOX x 50 (Listenbetrag 12500, 5% Rabatt 625, Warenwert 11875, Versand 1200, Gesamt 13075 Cent)
+python main.py --sku HP-BOX --quantity 50
+
+# E01: Menge 0 (verständlicher Validierungsfehler, Exit-Code 1, kein Angebot)
+python main.py --sku HP-BOX --quantity 0
+
+# Separater automatisierter Produkttest (gegen unveränderte Kundenfixtures in data/)
+python -m pytest tests/test_quotation_s6.py -q
+python -m unittest discover -s tests -p "test_*.py" -v
+```
+
+### 2. Factory-Tests inkl. deterministischer Projekttrennung & Pre-QA-Short-Circuit (`A1`, `A4`)
+
+```powershell
+# Standardlauf bzw. S3–S6 Factory- & Projekttrennungstests im Factory-Repository
+python -m pytest tests/test_session_03_factory.py tests/test_session_04_factory.py tests/test_session_05_factory.py tests/test_session_06_factory.py -q
+```
+
+### 3. Gesicherter Nordwerk-Produktstand aus Termin 5 (`../client-01-website`, `84d5baf`, `B5`)
+
+Das Altprodukt Nordwerk bleibt auf dem finalen Termin-5-Release-Stand **`84d5baf9fcfebd9b1c4772e63fcd6b92d70fc53f`** (`R-S5-FINAL` / `v1.0.0-s5-rc`, einschließlich deutscher Hauptseite `site/index.html` und englischer Einstiegsseite `site/en.html` sowie `docs/security-advisory-sr01.md`) völlig unverändert (`git status --porcelain` leer, `10/10` Tests bestanden) und separat ausführbar:
+
+```powershell
+cd ../client-01-website
+python -m http.server 8080 --directory site
+python -m unittest discover -s tests -p "test_*.py" -v
+```
