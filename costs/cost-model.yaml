@@ -378,6 +378,57 @@ agent_runs:
           - "run_product_test_tool"
         credits: 8.6417
 
+  session_07:
+    project_id: "quotation-02"
+    factory_commit_f_base: "0d84224c1b8bfc46380f25a4a401fa9a48318fb2"
+    product_input_commit: "0f880ead8de98dde615f5a166abbe6dbd793e765"
+    product_release_candidate_q_base: "d86b3c3853568297a16a7fb4c9f82cc3535e3d07"
+    model: "qwen3:4b@359d7dd4bcda"
+    includes_fault_and_baseline_runs: true
+    workflows:
+      - workflow_id: "WF-QUOTATION02-S7-001"
+        customer_task_id: "HP-S7-001"
+        status: "approved_at_human_gate (Release Candidate Q-BASE)"
+        run_ids:
+          - "4df4306c-26a9-4dc2-9b10-9f968416bd73"
+          - "fcbcf744-4a21-4711-bc75-598eaad3fcaa"
+          - "9acabd76-bf65-4252-94b1-be86521de1fb"
+        calls: 3
+        duration_seconds: 96.1998
+        recorded_input_tokens: 1698
+        recorded_output_tokens: 595
+        tools_used:
+          - "read_product_file_tool"
+          - "write_product_file_tool"
+          - "run_product_test_tool"
+        credits: 4.0198
+      - workflow_id: "WF-QUOTATION02-S7-FAULT-001"
+        customer_task_id: "HP-S7-FAULT-001"
+        status: "rejected_at_human_gate (escalate_to_human -> changes_requested)"
+        note: "Controlled 5% discount boundary fault (discount_tier_50_min_qty=51, i.e. > 50 instead of >= 50) in isolated product checkout; detected by test_quotation_s7.py (exit_code=1, Q03 total 13700 != 13075 cents) and blocked from approval."
+        run_ids:
+          - "90407ff7-0512-40bd-afc4-1a99f2cf08d7"
+          - "581a718b-d6b7-4167-bf4b-031581a59a3d"
+          - "d8ae4188-b5a9-462d-a01f-9b76bb3476ff"
+        calls: 3
+        duration_seconds: 39.3332
+        recorded_input_tokens: 3315
+        recorded_output_tokens: 618
+        credits: 3.4843
+      - workflow_id: "R-02-BASELINE-001"
+        customer_task_id: "R-02"
+        status: "approved_baseline_experiment (isolated Q-BASE checkout)"
+        note: "Reference task R-02 ('calculation_note': 'Net amounts; shipping shown separately.') executed on isolated Q-BASE checkout using F-BASE; passed 13/13 checks (116 subtests) in verify_r02_baseline.py with 0 regressions."
+        run_ids:
+          - "359c865f-a753-4677-80f4-b8e183e2a862"
+          - "d6065dcc-6bd5-4105-ba21-73613b9f4ce3"
+          - "93c69056-4e77-4672-9884-afa7f8250add"
+        calls: 3
+        duration_seconds: 31.4117
+        recorded_input_tokens: 1734
+        recorded_output_tokens: 479
+        credits: 3.3679
+
 credits_calculation:
   session_01_total_credits: 166.4369
   session_02_agent_credits: 41.8849
@@ -454,15 +505,25 @@ credits_calculation:
     human_factory_switch_development_credits: 75.0         # Accounted separately against 150.0 S6-S8 Factory switch budget
     session_06_known_grand_total_credits: 265.3969         # Partial known total excluding untraced diagnostic probes
   session_07_breakdown:
+    factory_commit_f_base: "0d84224c1b8bfc46380f25a4a401fa9a48318fb2"
+    product_input_commit: "0f880ead8de98dde615f5a166abbe6dbd793e765"
+    product_release_candidate_q_base: "d86b3c3853568297a16a7fb4c9f82cc3535e3d07"
     github_issue_urls:
       - "https://github.com/minhnyn/client-02-quotation/issues/2"
       - "https://github.com/mfadhilahm/agentic_ai_haw_2627/issues/5"
     nordwerk_frozen_commit: "84d5baf9fcfebd9b1c4772e63fcd6b92d70fc53f (R-S5-FINAL / v1.0.0-s5-rc on main, including English site/en.html)"
+    agent_credits_release_candidate_run: 4.0198
+    agent_credits_controlled_fault_run: 3.4843
+    agent_credits_r02_baseline_run: 3.3679
+    session_07_total_agent_credits: 10.8720
     human_customer_delivery_credits: 150.0
     human_review_credits: 75.0
     human_rework_credits: 25.0
     session_07_ci_credits: 2.0
+    session_07_customer_delivery_subtotal_credits: 262.8720 # 250.0 human + 10.8720 agent + 2.0 CI
+    s6_s7_cumulative_known_customer_delivery_credits: 453.2689 # 190.3969 (S6 known) + 262.8720 (S7) vs 631.0 S6+S7 delivery budget (177.7311 credits under budget; S6 untraced diagnostic probes marked unknown)
     human_factory_development_credits: 75.0                # Cumulative S6+S7 Factory switch/adaptation = 150.0 / 150.0 credits
+    session_07_grand_total_credits: 337.8720
     s6_s7_cumulative_human_customer_credits: 425.0         # 175.0 (S6) + 250.0 (S7) vs 600.0 S6+S7 planned human budget (175.0 credits under plan)
     s6_s7_cumulative_ci_credits: 5.0                       # 3.0 (S6) + 2.0 (S7) vs 6.0 S6+S7 planned CI budget (1.0 credit under plan)
     s8_reserve_remaining_credits: 315.0                    # 100% of S8 reserve untouched for CR-02 (HP-V2)

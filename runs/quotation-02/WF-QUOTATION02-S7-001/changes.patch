@@ -1,0 +1,82 @@
+--- a/quotation/calculator.py
++++ b/quotation/calculator.py
+@@ -21,9 +21,12 @@
+ MAX_LINES = 3
+ DISCOUNT_TIER_50_PERCENT = 5
+ DISCOUNT_TIER_100_PERCENT = 10
++DISCOUNT_TIER_50_MIN_QTY = 50
++DISCOUNT_TIER_100_MIN_QTY = 100
+ FREE_SHIPPING_THRESHOLD_CENTS = 50000
+ SHIPPING_FEE_CENTS = 1200
+ COURSE_NOTICE = "Net amounts – course project, not a binding quotation"
++CALCULATION_NOTE = None
+ 
+ DEFAULT_CATALOGUE_PATH = Path(__file__).resolve().parents[1] / CATALOGUE_REL_PATH
+ 
+@@ -51,9 +54,9 @@
+ 
+ 
+ def _discount_percent_for_quantity(quantity: int) -> int:
+-    if quantity >= 100:
++    if quantity >= DISCOUNT_TIER_100_MIN_QTY:
+         return DISCOUNT_TIER_100_PERCENT
+-    if quantity >= 50:
++    if quantity >= DISCOUNT_TIER_50_MIN_QTY:
+         return DISCOUNT_TIER_50_PERCENT
+     return 0
+ 
+@@ -192,7 +195,7 @@
+     )
+     total_cents = goods_net_cents + shipping_cents
+ 
+-    return {
++    result: dict[str, Any] = {
+         "currency": CURRENCY,
+         "rule_version": RULE_VERSION,
+         "course_notice": COURSE_NOTICE,
+@@ -201,3 +204,45 @@
+         "shipping_cents": shipping_cents,
+         "total_cents": total_cents,
+     }
++    if CALCULATION_NOTE:
++        result["calculation_note"] = CALCULATION_NOTE
++    return result
++
++
++def build_quotation_export_payload(
++    items_or_quotation: list[dict[str, Any]] | dict[str, Any],
++    *,
++    catalogue_path: str | Path | None = None,
++    rule_version: str = RULE_VERSION,
++) -> dict[str, Any]:
++    """Build a consistent JSON export dictionary with integer cents from calculated quotation data."""
++    if isinstance(items_or_quotation, dict) and "lines" in items_or_quotation:
++        payload = dict(items_or_quotation)
++    else:
++        payload = calculate_quotation(
++            items_or_quotation,  # type: ignore[arg-type]
++            catalogue_path=catalogue_path,
++            rule_version=rule_version,
++        )
++    if CALCULATION_NOTE and "calculation_note" not in payload:
++        payload["calculation_note"] = CALCULATION_NOTE
++    return payload
++
++
++export_quotation_dict = build_quotation_export_payload
++
++
++def export_quotation_json(
++    items_or_quotation: list[dict[str, Any]] | dict[str, Any],
++    *,
++    catalogue_path: str | Path | None = None,
++    rule_version: str = RULE_VERSION,
++    indent: int = 2,
++) -> str:
++    """Serialize a deterministic HansePack quotation export payload to a formatted JSON string."""
++    payload = build_quotation_export_payload(
++        items_or_quotation,
++        catalogue_path=catalogue_path,
++        rule_version=rule_version,
++    )
++    return json.dumps(payload, indent=indent, ensure_ascii=False)

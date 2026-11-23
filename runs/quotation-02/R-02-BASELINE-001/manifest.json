@@ -1,0 +1,54 @@
+{
+  "company": "HAW Agentic Software Factory",
+  "session": 6,
+  "project_id": "quotation-02",
+  "customer_task_id": "R-02",
+  "team_size": 6,
+  "factory_commit": "0d84224c1b8bfc46380f25a4a401fa9a48318fb2",
+  "factory_commit_clean": true,
+  "factory_dirty_files": [],
+  "workflow_code_sha256": "992007935cb401e3e398c10c1ee6f3bb51211cc553aef671ae801705101e5276",
+  "product_input_commit": "d86b3c3853568297a16a7fb4c9f82cc3535e3d07",
+  "product_worktree_state": "uncommitted_worktree",
+  "product_output_commit": "uncommitted_worktree",
+  "subsequent_product_commit": null,
+  "workflow_ids": [
+    "R-02-BASELINE-001"
+  ],
+  "run_ids": [
+    "359c865f-a753-4677-80f4-b8e183e2a862",
+    "d6065dcc-6bd5-4105-ba21-73613b9f4ce3",
+    "93c69056-4e77-4672-9884-afa7f8250add"
+  ],
+  "llm_provider": "ollama",
+  "llm_model": "qwen3:4b",
+  "model_tag_or_digest": "qwen3:4b@359d7dd4bcda",
+  "test_commands": [
+    "python -m pytest -q",
+    "python -m pytest tests/verify_r02_baseline.py -q (in ../client-02-quotation)"
+  ],
+  "product_test_passed": true,
+  "iterations_used": 1,
+  "max_correction_loops": 2,
+  "mock_runs_are_separate": false,
+  "review_file": "runs/quotation-02/R-02-BASELINE-001/review.json",
+  "artifact_hashes": {
+    "quotation/calculator.py": "c549d980717c2a6b2e1f5c121c31acdd2b60fcc5deb5c702486397f2ac4bf2cd"
+  },
+  "issue_and_pr_references": [
+    "https://github.com/minhnyn/client-02-quotation/issues/1",
+    "https://github.com/mfadhilahm/agentic_ai_haw_2627/issues/4",
+    "https://github.com/minhnyn/client-02-quotation/issues/2",
+    "https://github.com/mfadhilahm/agentic_ai_haw_2627/issues/5",
+    "https://github.com/minhnyn/client-02-quotation/blob/d86b3c3853568297a16a7fb4c9f82cc3535e3d07/docs/issue-02-session-07.md",
+    "https://github.com/minhnyn/client-02-quotation/blob/d86b3c3853568297a16a7fb4c9f82cc3535e3d07/docs/issue-01-session-06.md"
+  ],
+  "cost_records": "costs/usage.csv",
+  "total_estimated_agent_credits": 3.3679,
+  "llm_settings": {
+    "temperature": 0.0,
+    "reasoning": false,
+    "json_mode": true,
+    "min_output_tokens": 1024
+  }
+}

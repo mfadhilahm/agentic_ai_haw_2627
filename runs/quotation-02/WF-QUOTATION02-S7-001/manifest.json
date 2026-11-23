@@ -1,0 +1,54 @@
+{
+  "company": "HAW Agentic Software Factory",
+  "session": 6,
+  "project_id": "quotation-02",
+  "customer_task_id": "HP-S7-001",
+  "team_size": 6,
+  "factory_commit": "0d84224c1b8bfc46380f25a4a401fa9a48318fb2",
+  "factory_commit_clean": true,
+  "factory_dirty_files": [],
+  "workflow_code_sha256": "992007935cb401e3e398c10c1ee6f3bb51211cc553aef671ae801705101e5276",
+  "product_input_commit": "0f880ead8de98dde615f5a166abbe6dbd793e765",
+  "product_worktree_state": "committed_after_review",
+  "product_output_commit": "uncommitted_worktree",
+  "subsequent_product_commit": "d86b3c3853568297a16a7fb4c9f82cc3535e3d07",
+  "workflow_ids": [
+    "WF-QUOTATION02-S7-001"
+  ],
+  "run_ids": [
+    "4df4306c-26a9-4dc2-9b10-9f968416bd73",
+    "fcbcf744-4a21-4711-bc75-598eaad3fcaa",
+    "9acabd76-bf65-4252-94b1-be86521de1fb"
+  ],
+  "llm_provider": "ollama",
+  "llm_model": "qwen3:4b",
+  "model_tag_or_digest": "qwen3:4b@359d7dd4bcda",
+  "test_commands": [
+    "python -m pytest -q",
+    "python -m pytest tests/test_quotation_s7.py -q (in ../client-02-quotation)"
+  ],
+  "product_test_passed": true,
+  "iterations_used": 1,
+  "max_correction_loops": 2,
+  "mock_runs_are_separate": false,
+  "review_file": "runs/quotation-02/WF-QUOTATION02-S7-001/review.json",
+  "artifact_hashes": {
+    "quotation/calculator.py": "6000415817249f8b286e7fa22fa377db7b3317fe13711b8466376da998d58ce0"
+  },
+  "issue_and_pr_references": [
+    "https://github.com/minhnyn/client-02-quotation/issues/1",
+    "https://github.com/mfadhilahm/agentic_ai_haw_2627/issues/4",
+    "https://github.com/minhnyn/client-02-quotation/issues/2",
+    "https://github.com/mfadhilahm/agentic_ai_haw_2627/issues/5",
+    "https://github.com/minhnyn/client-02-quotation/blob/0f880ead8de98dde615f5a166abbe6dbd793e765/docs/issue-02-session-07.md",
+    "https://github.com/minhnyn/client-02-quotation/blob/0f880ead8de98dde615f5a166abbe6dbd793e765/docs/issue-01-session-06.md"
+  ],
+  "cost_records": "costs/usage.csv",
+  "total_estimated_agent_credits": 4.0198,
+  "llm_settings": {
+    "temperature": 0.0,
+    "reasoning": false,
+    "json_mode": true,
+    "min_output_tokens": 1024
+  }
+}

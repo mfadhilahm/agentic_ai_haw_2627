@@ -1,0 +1,29 @@
+{
+  "task_id": "HP-S7-FAULT-001",
+  "project_id": "quotation-02",
+  "workflow_id": "WF-QUOTATION02-S7-FAULT-001",
+  "decision": "changes_requested",
+  "reviewer": "felix",
+  "decided_at_utc": "2026-11-23T11:02:49.881194+00:00",
+  "tested_source_commit": "uncommitted_worktree",
+  "product_input_commit": "d86b3c3853568297a16a7fb4c9f82cc3535e3d07",
+  "product_worktree_state": "uncommitted_worktree (rejected_not_committed)",
+  "subsequent_product_commit": null,
+  "reviewed_artifact_hashes": {
+    "quotation/calculator.py": "82024d0f0f3f959620c4f8f2fff76ceca20b892ced0daea4453159bb52491a2b"
+  },
+  "report_path": "runs/quotation-02/WF-QUOTATION02-S7-FAULT-001/workflow-report.json",
+  "report_sha256": "1c2ae0dba9d798a098c473cf2e8b2383c4e0dbdf74b273c005a8f0d72b6c0f8e",
+  "test_evidence_paths": [
+    "runs/quotation-02/WF-QUOTATION02-S7-FAULT-001/trace.jsonl",
+    "runs/quotation-02/WF-QUOTATION02-S7-FAULT-001/manifest.json"
+  ],
+  "accepted_criteria": [],
+  "open_criteria": [
+    "HP-AC01",
+    "HP-AC02 (Q01, Q03)",
+    "HP-AC04 (E01)"
+  ],
+  "rationale": "Controlled 5% discount boundary fault (discount_tier_50_min_qty=51, i.e. > 50 instead of >= 50) caused Q03 to fail in tests/test_quotation_s7.py with total_cents=13700 instead of expected 13075 cents (exit_code=1). Approval blocked by quality gate (escalate_to_human); worktree reset to Q-BASE d86b3c3.",
+  "identity_assurance": "self_declared_course_review"
+}

@@ -1,0 +1,54 @@
+{
+  "company": "HAW Agentic Software Factory",
+  "session": 6,
+  "project_id": "quotation-02",
+  "customer_task_id": "HP-S7-FAULT-001",
+  "team_size": 6,
+  "factory_commit": "0d84224c1b8bfc46380f25a4a401fa9a48318fb2",
+  "factory_commit_clean": true,
+  "factory_dirty_files": [],
+  "workflow_code_sha256": "992007935cb401e3e398c10c1ee6f3bb51211cc553aef671ae801705101e5276",
+  "product_input_commit": "d86b3c3853568297a16a7fb4c9f82cc3535e3d07",
+  "product_worktree_state": "uncommitted_worktree (rejected_not_committed)",
+  "product_output_commit": "uncommitted_worktree",
+  "subsequent_product_commit": null,
+  "workflow_ids": [
+    "WF-QUOTATION02-S7-FAULT-001"
+  ],
+  "run_ids": [
+    "90407ff7-0512-40bd-afc4-1a99f2cf08d7",
+    "581a718b-d6b7-4167-bf4b-031581a59a3d",
+    "d8ae4188-b5a9-462d-a01f-9b76bb3476ff"
+  ],
+  "llm_provider": "ollama",
+  "llm_model": "qwen3:4b",
+  "model_tag_or_digest": "qwen3:4b@359d7dd4bcda",
+  "test_commands": [
+    "python -m pytest -q",
+    "python -m pytest tests/test_quotation_s7.py -q (in ../client-02-quotation)"
+  ],
+  "product_test_passed": false,
+  "iterations_used": 1,
+  "max_correction_loops": 1,
+  "mock_runs_are_separate": false,
+  "review_file": "runs/quotation-02/WF-QUOTATION02-S7-FAULT-001/review.json",
+  "artifact_hashes": {
+    "quotation/calculator.py": "82024d0f0f3f959620c4f8f2fff76ceca20b892ced0daea4453159bb52491a2b"
+  },
+  "issue_and_pr_references": [
+    "https://github.com/minhnyn/client-02-quotation/issues/1",
+    "https://github.com/mfadhilahm/agentic_ai_haw_2627/issues/4",
+    "https://github.com/minhnyn/client-02-quotation/issues/2",
+    "https://github.com/mfadhilahm/agentic_ai_haw_2627/issues/5",
+    "https://github.com/minhnyn/client-02-quotation/blob/d86b3c3853568297a16a7fb4c9f82cc3535e3d07/docs/issue-02-session-07.md",
+    "https://github.com/minhnyn/client-02-quotation/blob/d86b3c3853568297a16a7fb4c9f82cc3535e3d07/docs/issue-01-session-06.md"
+  ],
+  "cost_records": "costs/usage.csv",
+  "total_estimated_agent_credits": 3.4843,
+  "llm_settings": {
+    "temperature": 0.0,
+    "reasoning": false,
+    "json_mode": true,
+    "min_output_tokens": 1024
+  }
+}

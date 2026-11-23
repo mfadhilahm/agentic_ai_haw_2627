@@ -1,0 +1,31 @@
+{
+  "task_id": "HP-S7-001",
+  "project_id": "quotation-02",
+  "workflow_id": "WF-QUOTATION02-S7-001",
+  "decision": "approved",
+  "reviewer": "saad",
+  "decided_at_utc": "2026-11-23T11:01:35.416661+00:00",
+  "tested_source_commit": "d86b3c3853568297a16a7fb4c9f82cc3535e3d07",
+  "product_input_commit": "0f880ead8de98dde615f5a166abbe6dbd793e765",
+  "product_worktree_state": "committed_after_review",
+  "subsequent_product_commit": "d86b3c3853568297a16a7fb4c9f82cc3535e3d07",
+  "reviewed_artifact_hashes": {
+    "quotation/calculator.py": "6000415817249f8b286e7fa22fa377db7b3317fe13711b8466376da998d58ce0"
+  },
+  "report_path": "runs/quotation-02/WF-QUOTATION02-S7-001/workflow-report.json",
+  "report_sha256": "edc16212819d27445494e44f392b5b3dc8130c65bd25d9f35bcb2237a3e3c224",
+  "test_evidence_paths": [
+    "runs/quotation-02/WF-QUOTATION02-S7-001/trace.jsonl",
+    "runs/quotation-02/WF-QUOTATION02-S7-001/manifest.json"
+  ],
+  "accepted_criteria": [
+    "HP-AC01",
+    "HP-AC02 (Q01, Q03)",
+    "HP-AC04 (E01)"
+  ],
+  "open_criteria": [
+    "Final customer acceptance by instructor in live review (pending_customer_acceptance)"
+  ],
+  "rationale": "Reviewed changes.patch, verified all Q01-Q14 under HP-V1, all invalid cases E01-E10, Web UI multi-line Q12 and JSON download parity (docs/ui-export-review-s7.md), and untouched Nordwerk 84d5baf release.",
+  "identity_assurance": "self_declared_course_review"
+}

@@ -416,3 +416,23 @@ cd ../client-01-website
 python -m http.server 8080 --directory site
 python -m unittest discover -s tests -p "test_*.py" -v
 ```
+
+
+## Termin 7: Vollständiger `HP-V1`-Angebotsrechner (`Q01`–`Q14`, `E01`–`E10`), Web-UI, JSON-Export, kontrollierter Rabattfehler (`> 50`) & `R-02`-Baseline (`quotation-02`)
+
+In Termin 7 ([`evidence/session-07.md`](evidence/session-07.md), GitHub Issue [`client-02-quotation#2`](https://github.com/minhnyn/client-02-quotation/issues/2) / [`agentic_ai_haw_2627#5`](https://github.com/mfadhilahm/agentic_ai_haw_2627/issues/5)) wurden auf Basis der eingefrorenen Factory-Baseline **`F-BASE` (`0d84224c1b8bfc46380f25a4a401fa9a48318fb2`)** drei vollständige Multi-Agenten-Läufe auf Ollama `qwen3:4b@359d7dd4bcda` durchgeführt:
+1. **Release Candidate `Q-BASE` (`WF-QUOTATION02-S7-001` $\rightarrow$ Commit `d86b3c3853568297a16a7fb4c9f82cc3535e3d07`):** Vollständiger `HP-V1`-Rechenumfang (alle 3 Artikel, Mengenstaffeln `5%` ab `50` / `10%` ab `100`, kaufmännische Rundung `ROUND_HALF_UP`, Versandregel `1200` Cent unter `50000` Cent nach Rabatt), FastAPI-Weboberfläche (`app.py`) mit sichtbarem Netto-Hinweis (`"Net amounts – course project, not a binding quotation"`), JSON-Download (`POST /api/quotation/export`) und Python-Validierung aller ungültigen Eingaben (`E01`–`E10`). Freigegeben durch `saad` ([`runs/quotation-02/WF-QUOTATION02-S7-001/review.json`](runs/quotation-02/WF-QUOTATION02-S7-001/review.json)).
+2. **Kontrollierter Fachfehler (`WF-QUOTATION02-S7-FAULT-001`):** Isolierte Änderung der 5%-Rabattgrenze auf `> 50` (`discount_tier_50_min_qty=51`) statt `>= 50`. Schlägt in `Q03` fehl (`13700` statt `13075` Cent, `pytest_exit_code=1`), wird vom Quality Gate auf `escalate_to_human` blockiert und durch `felix` mit `decision="changes_requested"` zurückgewiesen ([`runs/quotation-02/WF-QUOTATION02-S7-FAULT-001/review.json`](runs/quotation-02/WF-QUOTATION02-S7-FAULT-001/review.json)). Nicht in `main` gemerged.
+3. **Isolierte `R-02`-Baseline (`R-02-BASELINE-001`):** Ausführung der Vergleichsaufgabe `R-02` (`"calculation_note": "Net amounts; shipping shown separately."`) auf einer sauberen isolierten Kopie von `Q-BASE` (`d86b3c3`) mit `F-BASE` (`0d84224`), verifiziert durch `tests/verify_r02_baseline.py` (`13/13` Tests, `116` Subtests bestanden, `0` Regressionen). Nicht in `main` gemerged.
+
+```powershell
+# 1. HansePack-Produkt (Q-BASE) unabhängig ohne Factory/LLM starten und testen:
+cd ../client-02-quotation
+python app.py                                      # Web-UI & JSON-Download auf http://127.0.0.1:8000
+python -m pytest tests/test_quotation_s7.py -q     # Alle 14 gültigen Q01–Q14 + 10 ungültigen E01–E10 + UI/Export
+python tests/verify_r02_baseline.py                # Isolierte R-02-Verifikationssuite (13 Tests)
+
+# 2. Factory-Tests inkl. S7-Gate-Tests (Bestanden + Zurückgehalten bei Q03 13700 != 13075):
+cd ../agentic_ai_haw_2627
+python -m pytest tests/test_session_03_factory.py tests/test_session_04_factory.py tests/test_session_05_factory.py tests/test_session_06_factory.py tests/test_session_07_factory.py -q
+```
