@@ -87,6 +87,8 @@ python_module_contract:
     discount_tier_100_percent: 0
     free_shipping_threshold_cents: 0
     shipping_fee_cents: 0
+    discount_tier_50_min_qty: 1
+    discount_tier_100_min_qty: 1
   enum_rule_keys:
     rounding_mode:
       - "ROUND_HALF_UP"
@@ -105,3 +107,50 @@ python_module_contract:
     free_shipping_threshold_cents: "FREE_SHIPPING_THRESHOLD_CENTS"
     shipping_fee_cents: "SHIPPING_FEE_CENTS"
     course_notice: "COURSE_NOTICE"
+    discount_tier_50_min_qty: "DISCOUNT_TIER_50_MIN_QTY"
+    discount_tier_100_min_qty: "DISCOUNT_TIER_100_MIN_QTY"
+    calculation_note: "CALCULATION_NOTE"
+
+# Session 7 Customer Delivery Task: Full HP-V1 Calculation & JSON Export (HP-AC01..HP-AC07, A1, A2, B1..B6)
+s7_customer_task:
+  task_id: "HP-S7-001"
+  description: "Complete HP-V1 quotation calculation (Q01-Q14, all 3 SKUs, ROUND_HALF_UP, E01-E10 validation) and consistent JSON export helper in quotation/calculator.py verified against tests/test_quotation_s7.py."
+  product_input_files:
+    - "docs/issue-01-session-06.md"
+    - "data/HansePack_Katalog.json"
+    - "data/HansePack_Referenzfaelle.json"
+    - "quotation/calculator.py"
+  product_test_target: "tests/test_quotation_s7.py"
+  additional_required_content:
+    discount_tier_50_min_qty: "50"
+    discount_tier_100_min_qty: "100"
+
+# Session 7 Controlled Business Fault Task: 5% Discount Boundary > 50 (from 51) instead of >= 50 (A3, A4, L7.2, L7.3)
+s7_fault_task:
+  task_id: "HP-S7-FAULT-001"
+  description: "Controlled business fault check: set 5% discount boundary to strictly above 50 (quantity > 50 / min_qty 51) instead of from 50 (quantity >= 50) so Q03 yields 13700 instead of 13075 cents and is blocked by tests/test_quotation_s7.py."
+  product_input_files:
+    - "docs/issue-01-session-06.md"
+    - "data/HansePack_Katalog.json"
+    - "data/HansePack_Referenzfaelle.json"
+    - "quotation/calculator.py"
+  product_test_target: "tests/test_quotation_s7.py"
+  max_correction_loops: 1
+  additional_required_content:
+    discount_tier_50_min_qty: "51"
+    discount_tier_100_min_qty: "100"
+
+# Isolated Session 7 Reference Experiment Baseline Task (R-02 on isolated copy of Q-BASE; C1, C3, L7.4)
+r02_reference_task:
+  task_id: "R-02"
+  description: "Ergänze im exportierten Angebots-JSON das Feld calculation_note mit dem festen Text 'Net amounts; shipping shown separately.'. Anzeige, Geldwerte und Fehlerbehandlung bleiben unverändert. Ergänze einen Test für das Feld; alle bisherigen Fachtests müssen weiter bestehen."
+  product_input_files:
+    - "docs/issue-01-session-06.md"
+    - "data/HansePack_Katalog.json"
+    - "data/HansePack_Referenzfaelle.json"
+    - "quotation/calculator.py"
+  product_test_target: "tests/verify_r02_baseline.py"
+  delta_keys:
+    - "calculation_note"
+  additional_required_content:
+    calculation_note: "Net amounts; shipping shown separately."

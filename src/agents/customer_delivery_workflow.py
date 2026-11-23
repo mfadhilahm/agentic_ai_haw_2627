@@ -128,6 +128,22 @@ HANSEPACK_S6_REQUIRED_RULES: dict[str, str] = {
     "course_notice": "Net amounts – course project, not a binding quotation",
 }
 
+HANSEPACK_S7_REQUIRED_RULES: dict[str, str] = {
+    **HANSEPACK_S6_REQUIRED_RULES,
+    "discount_tier_50_min_qty": "50",
+    "discount_tier_100_min_qty": "100",
+}
+
+HANSEPACK_S7_FAULT_REQUIRED_RULES: dict[str, str] = {
+    **HANSEPACK_S7_REQUIRED_RULES,
+    "discount_tier_50_min_qty": "51",
+}
+
+HANSEPACK_R02_REQUIRED_RULES: dict[str, str] = {
+    **HANSEPACK_S7_REQUIRED_RULES,
+    "calculation_note": "Net amounts; shipping shown separately.",
+}
+
 FORBIDDEN_PRODUCT_LLM_IMPORTS: tuple[str, ...] = (
     "openai",
     "ollama",
@@ -351,6 +367,59 @@ def build_task_from_project_config(
         if isinstance(r01_cfg.get("product_input_files"), list):
             input_files = [str(x) for x in r01_cfg["product_input_files"]]
 
+    # Support Session 7 HansePack customer task (HP-S7-001), controlled discount fault task (HP-S7-FAULT-001),
+    # and isolated R-02 reference baseline task directly from quotation-02.yaml (A1..A4, C1, C3, L7.1..L7.4)
+    upper_task_id = resolved_task_id.upper()
+    s7_cfg: dict[str, Any] | None = None
+    if upper_task_id.startswith("HP-S7-FAULT") and isinstance(
+        cfg.get("s7_fault_task"), dict
+    ):
+        s7_cfg = cfg["s7_fault_task"]
+    elif upper_task_id.startswith("HP-S7") and isinstance(
+        cfg.get("s7_customer_task"), dict
+    ):
+        s7_cfg = cfg["s7_customer_task"]
+    elif upper_task_id.startswith("R-02") and isinstance(
+        cfg.get("r02_reference_task"), dict
+    ):
+        if isinstance(cfg.get("s7_customer_task"), dict) and isinstance(
+            cfg["s7_customer_task"].get("additional_required_content"), dict
+        ):
+            req_content.update(
+                {
+                    str(k): str(v)
+                    for k, v in cfg["s7_customer_task"][
+                        "additional_required_content"
+                    ].items()
+                }
+            )
+        s7_cfg = cfg["r02_reference_task"]
+
+    effective_max_loops = (
+        max_correction_loops
+        if max_correction_loops is not None
+        else int(cfg.get("max_correction_loops", 2))
+    )
+    if isinstance(s7_cfg, dict):
+        if isinstance(s7_cfg.get("description"), str) and s7_cfg["description"].strip():
+            description = s7_cfg["description"].strip()
+        if isinstance(s7_cfg.get("additional_required_content"), dict):
+            req_content.update(
+                {
+                    str(k): str(v)
+                    for k, v in s7_cfg["additional_required_content"].items()
+                }
+            )
+        if isinstance(s7_cfg.get("product_test_target"), str):
+            product_test_target = s7_cfg["product_test_target"]
+        if isinstance(s7_cfg.get("product_input_files"), list):
+            input_files = [str(x) for x in s7_cfg["product_input_files"]]
+        if (
+            max_correction_loops is None
+            and isinstance(s7_cfg.get("max_correction_loops"), int)
+        ):
+            effective_max_loops = int(s7_cfg["max_correction_loops"])
+
     task = CustomerDeliveryTask(
         task_id=resolved_task_id,
         description=description,
@@ -362,9 +431,7 @@ def build_task_from_project_config(
         target_product_file=str(cfg.get("target_product_file", "site/index.html")),
         product_test_target=product_test_target,
         allowed_write_prefixes=list(cfg.get("allowed_write_prefixes", ["site/"])),
-        max_correction_loops=max_correction_loops
-        if max_correction_loops is not None
-        else int(cfg.get("max_correction_loops", 2)),
+        max_correction_loops=effective_max_loops,
     )
     return task, req_content
 
@@ -449,6 +516,8 @@ DEFAULT_PYTHON_MODULE_CONTRACT: dict[str, Any] = {
         "discount_tier_100_percent": 0,
         "free_shipping_threshold_cents": 0,
         "shipping_fee_cents": 0,
+        "discount_tier_50_min_qty": 1,
+        "discount_tier_100_min_qty": 1,
     },
     "enum_rule_keys": {
         "rounding_mode": ["ROUND_HALF_UP"],
@@ -469,6 +538,9 @@ DEFAULT_PYTHON_MODULE_CONTRACT: dict[str, Any] = {
         "free_shipping_threshold_cents": "FREE_SHIPPING_THRESHOLD_CENTS",
         "shipping_fee_cents": "SHIPPING_FEE_CENTS",
         "course_notice": "COURSE_NOTICE",
+        "discount_tier_50_min_qty": "DISCOUNT_TIER_50_MIN_QTY",
+        "discount_tier_100_min_qty": "DISCOUNT_TIER_100_MIN_QTY",
+        "calculation_note": "CALCULATION_NOTE",
     },
 }
 
@@ -607,7 +679,12 @@ def render_python_module_from_contract(
         )
     template_text = template_path.read_text(encoding="utf-8")
 
-    render_ctx: dict[str, Any] = {}
+    render_ctx: dict[str, Any] = {
+        "discount_tier_50_min_qty": 50,
+        "discount_tier_100_min_qty": 100,
+        "calculation_note": "",
+        "calculation_note_lit": "None",
+    }
     for k, v in normalized.items():
         render_ctx[k] = v
         if isinstance(v, str):
@@ -1520,7 +1597,8 @@ def run_customer_delivery_workflow(
         else:
             try:
                 _, loaded_req_content = build_task_from_project_config(
-                    project_id=resolved_project_id
+                    project_id=resolved_project_id,
+                    task_id=task.task_id,
                 )
                 required_content = loaded_req_content
             except Exception:
@@ -2251,7 +2329,7 @@ def run_customer_delivery_workflow(
             findings.append(
                 QAFinding(
                     severity="high",
-                    description=f"Product check failed: {test_output[:500]}",
+                    description=f"Product check failed: {test_output[:1200]}",
                 )
             )
 
