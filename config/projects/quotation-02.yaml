@@ -1,4 +1,4 @@
-# Session 6 Customer Project 02 Configuration (A1: Project Switch, Reuse, and Isolation)
+# Session 6 & 7 Customer Project 02 Configuration (A1: Project Switch, Reuse, and Isolation)
 project_id: "quotation-02"
 customer_name: "HansePack Handelsgesellschaft"
 customer_task_id: "HP-S6-001"
@@ -12,10 +12,12 @@ product_repo_path: "../client-02-quotation"
 factory_github_url: "https://github.com/mfadhilahm/agentic_ai_haw_2627"
 product_github_url: "https://github.com/minhnyn/client-02-quotation"
 
-# Real GitHub Issue URLs tracking the HansePack commission (Feedback Point 2)
+# Real GitHub Issue URLs tracking the HansePack commission (Feedback Point 2 & Session 7)
 github_issue_urls:
   - "https://github.com/minhnyn/client-02-quotation/issues/1"
   - "https://github.com/mfadhilahm/agentic_ai_haw_2627/issues/4"
+  - "https://github.com/minhnyn/client-02-quotation/issues/2"
+  - "https://github.com/mfadhilahm/agentic_ai_haw_2627/issues/5"
 
 # Allowed writable directory prefixes inside the product checkout (A4 sandbox)
 allowed_write_prefixes:
@@ -39,7 +41,7 @@ product_start_command: "python main.py --sku HP-BOX --quantity 50"
 # Bounded retry/correction loop before human escalation (A4)
 max_correction_loops: 2
 
-# Accountable humans for Session 6 (D1)
+# Accountable humans for Session 6 & 7 (D1)
 accountable_humans:
   commission_lead: "yaw"
   requirements_owner: "saad"
@@ -116,6 +118,7 @@ s7_customer_task:
   task_id: "HP-S7-001"
   description: "Complete HP-V1 quotation calculation (Q01-Q14, all 3 SKUs, ROUND_HALF_UP, E01-E10 validation) and consistent JSON export helper in quotation/calculator.py verified against tests/test_quotation_s7.py."
   product_input_files:
+    - "docs/issue-02-session-07.md"
     - "docs/issue-01-session-06.md"
     - "data/HansePack_Katalog.json"
     - "data/HansePack_Referenzfaelle.json"
@@ -125,11 +128,12 @@ s7_customer_task:
     discount_tier_50_min_qty: "50"
     discount_tier_100_min_qty: "100"
 
-# Session 7 Controlled Business Fault Task: 5% Discount Boundary > 50 (from 51) instead of >= 50 (A3, A4, L7.2, L7.3)
+# Session 7 Controlled Business Fault Task: 5% discount wrongly starts above 50 (quantity > 50 / min_qty 51; A3, A4, L7.2, L7.3)
 s7_fault_task:
   task_id: "HP-S7-FAULT-001"
-  description: "Controlled business fault check: set 5% discount boundary to strictly above 50 (quantity > 50 / min_qty 51) instead of from 50 (quantity >= 50) so Q03 yields 13700 instead of 13075 cents and is blocked by tests/test_quotation_s7.py."
+  description: "Controlled business fault injection: set 5% discount boundary to strictly above 50 (quantity >= 51) instead of from 50 (quantity >= 50) so Q03 yields 13700 instead of 13075 cents and is blocked by tests/test_quotation_s7.py."
   product_input_files:
+    - "docs/issue-02-session-07.md"
     - "docs/issue-01-session-06.md"
     - "data/HansePack_Katalog.json"
     - "data/HansePack_Referenzfaelle.json"
@@ -145,6 +149,7 @@ r02_reference_task:
   task_id: "R-02"
   description: "Ergänze im exportierten Angebots-JSON das Feld calculation_note mit dem festen Text 'Net amounts; shipping shown separately.'. Anzeige, Geldwerte und Fehlerbehandlung bleiben unverändert. Ergänze einen Test für das Feld; alle bisherigen Fachtests müssen weiter bestehen."
   product_input_files:
+    - "docs/issue-02-session-07.md"
     - "docs/issue-01-session-06.md"
     - "data/HansePack_Katalog.json"
     - "data/HansePack_Referenzfaelle.json"

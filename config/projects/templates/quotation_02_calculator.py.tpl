@@ -229,6 +229,9 @@ def build_quotation_export_payload(
     return payload
 
 
+export_quotation_dict = build_quotation_export_payload
+
+
 def export_quotation_json(
     items_or_quotation: list[dict[str, Any]] | dict[str, Any],
     *,
