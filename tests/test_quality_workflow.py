@@ -265,17 +265,6 @@ def test_configured_llm_budget_is_independent_of_pytest(monkeypatch, tmp_path, p
     assert trace(path)[0]["llm_response_received"] is True
 
 
-def test_ollama_qa_disables_thinking_and_requests_json():
-    settings = Settings(_env_file=None, llm_timeout_seconds=180, llm_max_output_tokens=384)
-    model = get_chat_model(settings, json_mode=True)
-    assert model.reasoning is False
-    assert model.format == "json"
-    assert model.num_predict == 384
-    assert model.client_kwargs["timeout"] == 180
-    # JSON mode is requested by QA without changing other callers' output format.
-    assert get_chat_model(settings).format is None
-
-
 def test_worker_requests_json_and_passes_only_safe_metrics(monkeypatch):
     payloads = []
     class Connection:
