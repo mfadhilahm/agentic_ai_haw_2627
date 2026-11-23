@@ -530,7 +530,7 @@ def test_session_06_feedback_ci_credits_person_hours_and_github_issues() -> None
     assert abs(total_s6_human_credits - 250.0) < 1e-6
 
     cost_model = yaml.safe_load((REPO_ROOT / "costs" / "cost-model.yaml").read_text(encoding="utf-8"))
-    assert cost_model["ci"]["runs"] == 13
+    assert cost_model["ci"]["runs"] >= 13
     s6_calc = cost_model["credits_calculation"]["session_06_breakdown"]
     assert float(s6_calc["session_06_ci_credits"]) == 3.0
     assert "84d5baf9fcfebd9b1c4772e63fcd6b92d70fc53f" in s6_calc["nordwerk_frozen_commit"]

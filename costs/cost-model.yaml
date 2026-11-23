@@ -12,10 +12,10 @@ agent:
 
 ci:
   run_credits: 1.0
-  runs: 13
+  runs: 15
 
-session: 6
-date: 2026-11-16
+session: 7
+date: 2026-11-23
 
 # -----------------------------------------------------------------------------
 # Session 3–5 Customer Project 01 (Nordwerk Industrie-Service) Budget Plan (C2, C3)
@@ -91,7 +91,21 @@ human_effort:
       mirko: 0.35    # 21 min (0.25h customer_delivery + 0.10h rework) = 35.0 credits
       muhammad: 0.65 # 39 min (0.50h factory_switch + 0.15h rework) = 65.0 credits
     session_06_total_hours: 2.50           # 250.0 credits (1.75h = 175.0 customer delivery/review/rework + 0.75h = 75.0 Factory switch)
-  total_hours: 67.00
+  session_07_breakdown:
+    unit_definition: "All values are explicit individual person-hours (Personenstunden, 100.0 credits/h), assigned exclusively per person and activity without overlap."
+    factory_development_hours: 0.75        # 75.0 credits (muhammad: 0.50h [30m], minh: 0.25h [15m] - S6 feedback remediation & S7 Factory gate tests)
+    customer_delivery_hours: 1.50          # 150.0 credits (mirko: 0.50h [30m], felix: 0.50h [30m], saad: 0.25h [15m], yaw: 0.25h [15m])
+    human_review_hours: 0.75               # 75.0 credits (saad: 0.25h [15m], felix: 0.20h [12m], minh: 0.15h [9m], yaw: 0.15h [9m])
+    rework_hours: 0.25                     # 25.0 credits (muhammad: 0.15h [9m], mirko: 0.10h [6m])
+    per_member_person_hours:
+      yaw: 0.40      # 24 min (0.25h customer_delivery + 0.15h human_review) = 40.0 credits
+      saad: 0.50     # 30 min (0.25h customer_delivery + 0.25h human_review) = 50.0 credits
+      felix: 0.70    # 42 min (0.50h customer_delivery + 0.20h human_review) = 70.0 credits
+      minh: 0.40     # 24 min (0.25h factory_development + 0.15h human_review) = 40.0 credits
+      mirko: 0.60    # 36 min (0.50h customer_delivery + 0.10h rework) = 60.0 credits
+      muhammad: 0.65 # 39 min (0.50h factory_development + 0.15h rework) = 65.0 credits
+    session_07_total_hours: 3.25           # 325.0 credits (2.50h = 250.0 customer delivery/review/rework + 0.75h = 75.0 Factory dev)
+  total_hours: 70.25
 
 agent_runs:
   session_01:
@@ -439,6 +453,19 @@ credits_calculation:
     session_06_known_customer_subtotal_credits: 190.3969   # Partial known total (175.0 human + 12.3969 tracked workflow agent + 3.0 CI; untraced diagnostic probes marked unknown)
     human_factory_switch_development_credits: 75.0         # Accounted separately against 150.0 S6-S8 Factory switch budget
     session_06_known_grand_total_credits: 265.3969         # Partial known total excluding untraced diagnostic probes
+  session_07_breakdown:
+    github_issue_urls:
+      - "https://github.com/minhnyn/client-02-quotation/issues/2"
+      - "https://github.com/mfadhilahm/agentic_ai_haw_2627/issues/5"
+    nordwerk_frozen_commit: "84d5baf9fcfebd9b1c4772e63fcd6b92d70fc53f (R-S5-FINAL / v1.0.0-s5-rc on main, including English site/en.html)"
+    human_customer_delivery_credits: 150.0
+    human_review_credits: 75.0
+    human_rework_credits: 25.0
+    session_07_ci_credits: 2.0
+    human_factory_development_credits: 75.0                # Cumulative S6+S7 Factory switch/adaptation = 150.0 / 150.0 credits
+    s6_s7_cumulative_human_customer_credits: 425.0         # 175.0 (S6) + 250.0 (S7) vs 600.0 S6+S7 planned human budget (175.0 credits under plan)
+    s6_s7_cumulative_ci_credits: 5.0                       # 3.0 (S6) + 2.0 (S7) vs 6.0 S6+S7 planned CI budget (1.0 credit under plan)
+    s8_reserve_remaining_credits: 315.0                    # 100% of S8 reserve untouched for CR-02 (HP-V2)
 
 # -----------------------------------------------------------------------------
 # Session 6–8 Customer Project 02 (HansePack Handelsgesellschaft) Budget Plan
